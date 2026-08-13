@@ -9,9 +9,9 @@ from 40 ms down to 6 ms and watch base64 and leetspeak attacks stop being
 caught, because the only component that could read them no longer fits.
 
 **Inspired by:** Gray Swan AI (grayswan.ai) — AI safety & security platform
-(Cygnal, Shade, Arena) used by every major frontier lab. An independent
-mini-demo built by Aarush Kandukoori, inspired by Gray Swan AI's public product
-description. Not affiliated with Gray Swan AI.
+(Cygnal, Shade, Arena) used by every major frontier lab. Built by Aarush Kandukoori with AI assistance. An independent mini-demo
+inspired by Gray Swan AI's public product description; not affiliated with
+Gray Swan AI.
 
 ## How it works
 

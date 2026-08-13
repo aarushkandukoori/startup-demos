@@ -7,7 +7,7 @@
 
    Expected skeleton:
 
-     <header class="demo-header"> … .demo-back / h1 / .demo-sub / .provenance
+     <header class="demo-header"> … h1 / .demo-sub / .demo-meta / .provenance
      <main class="demo-main">
        <section class="demo-stage">   <!-- the working area -->
        <aside class="demo-controls">  <!-- knobs, inputs, legend -->
@@ -15,39 +15,34 @@
 
    The stage comes first in the DOM (so keyboard and screen-reader users hit
    the demo before the knobs); on wide screens the controls sit to the right.
+
+   NO NAVIGATION PRIMITIVE, ON PURPOSE. A demo page is sealed: each company
+   receives a link to their own demo and nothing else, so no element on the
+   page may lead to the site root, to the index page, or to a sibling demo.
+   This file deliberately defines no return-link, crumb-trail or root-link
+   class, and the footer carries no anchor. Do not add one, and do not
+   "solve" a stray navigation link by hiding it — the markup must never be
+   emitted at all. See TEMPLATE.md §2 "It is sealed" and §8 check C6, which
+   greps this file to make sure such a class has not reappeared.
    ========================================================================== */
 
 /* Header ------------------------------------------------------------------ */
 
+/* The title is the first thing in the header — there is no nav row above it
+   (see the note at the top of this file), so the top padding carries the
+   whole optical gap between the top of the viewport and the h1. It is a step
+   larger than the bottom padding for that reason; matching them makes the
+   title look pinned to the edge. */
 .demo-header {
   border-bottom: 1px solid var(--border);
   background: var(--surface);
-  padding-block: var(--s-5) var(--s-5);
+  padding-block: var(--s-6) var(--s-5);
 }
 
 .demo-header > .wrap {
   display: flex;
   flex-direction: column;
   gap: var(--s-3);
-}
-
-.demo-back {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s-2);
-  align-self: flex-start;
-  font-size: var(--fs-sm);
-  font-weight: 560;
-  color: var(--text-muted);
-  text-decoration: none;
-}
-
-.demo-back:hover {
-  color: var(--accent);
-}
-
-.demo-back::before {
-  content: "\2190"; /* ← */
 }
 
 .demo-title {
@@ -68,8 +63,10 @@
   gap: var(--s-2);
 }
 
-/* The provenance note lives in the header and must stay visible without
-   scrolling on a phone — never collapse it behind a disclosure. */
+/* The attribution line lives in the header, as the last element of the header
+   block, and must stay visible on load without scrolling — on desktop and on
+   a phone. Never collapse it behind a disclosure, never dim it out of
+   legibility. Exact required wording: TEMPLATE.md §2. */
 .demo-header .provenance {
   padding-top: var(--s-2);
   border-top: 1px solid var(--border);
@@ -260,6 +257,9 @@
 
 /* Footer ------------------------------------------------------------------ */
 
+/* One line of text, no links. The footer used to carry a return-link anchor;
+   it must not reappear. Laid out with flex so a second <span> (never an <a>)
+   can sit opposite it if a demo needs one. */
 .demo-footer {
   border-top: 1px solid var(--border);
   margin-top: var(--s-7);

@@ -10,8 +10,9 @@ emitted rows and recall move together.
 
 **Inspired by:** Synnada (synnada.ai) — "AI-native real-time data processing
 built by core Apache DataFusion committers".
-An independent mini-demo built by Aarush Kandukoori, inspired by Synnada's
-public product description. Not affiliated with Synnada.
+Built by Aarush Kandukoori with AI assistance. An independent mini-demo
+inspired by Synnada's public product description; not affiliated with
+Synnada.
 
 ## How it works
 

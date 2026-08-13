@@ -24,10 +24,47 @@ summary anyone can read on a company's homepage.
   company, nor any of their code, data, assets, logos, or brand colours.
 - Company names appear only to credit what inspired a demo. All trademarks
   belong to their respective owners.
-- Every demo carries this line, visibly, on its own page:
+- Every demo carries this line, visibly, in its own page header:
 
-  > An independent mini-demo built by Aarush Kandukoori, inspired by
-  > `<Company>`'s public product description. Not affiliated with `<Company>`.
+  > Built by Aarush Kandukoori with AI assistance. An independent mini-demo
+  > inspired by `<Company>`'s public product description; not affiliated with
+  > `<Company>`.
+
+## Built with AI assistance
+
+These demos were built by Aarush Kandukoori with AI assistance, and every one
+of them says so on its own page. The design, the choice of what to build for
+each company, the technique each demo demonstrates, and the review of whether
+it actually works are his; the code was written with an AI assistant's help.
+Neither half of that is hidden.
+
+## One demo per link
+
+Each demo is a **sealed page**. A company receives a link to their demo and
+only their demo, and a demo page contains no link to the site root, to an
+index, or to any sibling demo — see [`TEMPLATE.md`](./TEMPLATE.md) §2 "It is
+sealed". The landing page at the site root enumerates nothing: no list, no
+filter, no count, no links to demos. The inventory of what has been built
+lives in `local/INVENTORY.json`, which is gitignored and never published.
+
+### What this does not do
+
+**This is not access control, and it is not privacy.** Two things are worth
+being plain about:
+
+- **The repository is public.** Anyone who finds it — including anyone who
+  received a demo link and went looking — can browse
+  `github.com/aarushkandukoori/startup-demos`, read the directory listing
+  under `demos/`, and see every company a demo was built for. That is a
+  property of a public repository, not something the site can undo.
+- **The site is public too.** Every demo URL is guessable and unauthenticated.
+  Nothing here checks who is asking.
+
+What the sealed-page rule actually buys is narrower and worth stating
+honestly: a recipient reading their own demo is not *shown* the others, and
+trimming the URL to the site root does not hand them a list. Someone who goes
+looking will find them. If a demo ever needs to be genuinely private, it must
+not be published from a public repository at all.
 
 All data shown in every demo is synthetic and generated in-browser. Nothing
 here is real measurement data, and nothing here — least of all the
@@ -40,8 +77,10 @@ of any kind.
 
 ```
 .
-├── index.html            landing page — renders the card grid
-├── demos.js              the manifest that drives the landing page
+├── index.html            landing page — a few sentences, enumerates nothing
+├── demos.js              deliberately empty; kept so /demos.js is not a 404
+├── local/                gitignored, never published
+│   └── INVENTORY.json    the demo list — companies, slugs, titles
 ├── assets/
 │   ├── base.css          shared design system (every demo imports this)
 │   └── demo-shell.css    optional layout primitives for a demo page
@@ -58,63 +97,50 @@ of any kind.
 
 ---
 
-## How the landing page gets its list
+## The landing page has no list
 
-`index.html` renders its cards from `window.DEMOS`, an array defined in
-`demos.js` and loaded with a **plain `<script src="./demos.js">` tag**.
+The site root used to render a card grid of every demo from a published
+`demos.js` manifest. It no longer does, and the manifest is now an empty
+array.
 
-### Why a script tag and not `fetch('demos.json')`
+The reason is the one thing the old design got wrong: **a published manifest
+undoes a sealed page.** Demo pages were careful never to link to each other,
+but `demos.js` sat at the repository root, and GitHub Pages serves every file
+at the repository root. Any recipient who trimmed their demo URL back to `/`
+saw a grid of every company; anyone who fetched `/demos.js` directly saw the
+same list even if the grid were removed. The isolation was one URL edit deep.
 
-The brief was to pick the approach that cannot break on GitHub Pages. A fetch
-of a JSON manifest has several ways to fail, and every one of them produces a
-blank page unless you also maintain a duplicated fallback list:
+So the root page is now static: a few sentences saying what the site is and
+that it is not an index. No list, no filter, no counts, no links to demos, and
+no script that could ever grow one. `demos.js` is kept as
+`window.DEMOS = []` — with a comment saying why — only so that `/demos.js`
+returns valid empty JavaScript rather than a 404 page, and so that an agent
+which appends an entry out of habit leaks nothing by itself.
 
-| Failure mode | `fetch('demos.json')` | `<script src="demos.js">` |
-| --- | --- | --- |
-| Opened from `file://` (local check, someone's download) | Blocked by CORS — fetch rejects | Works |
-| File missing or 404 (bad path, not yet committed) | Rejects / parses HTML 404 page as JSON | `window.DEMOS` stays undefined |
-| Stale CDN cache serving old JSON | Silent wrong content | Same cache rules, but no parse step |
-| Trailing comma / bad quote from an appending agent | `JSON.parse` throws, whole list lost | JS tolerates trailing commas; the array still loads |
-| Manifest genuinely broken | Blank grid | Empty state renders, page intact |
+### Adding a demo
 
-The script tag has no request that can be blocked, no parse step that can
-throw asynchronously, and no need for a duplicated hard-coded fallback list
-that would immediately drift out of date. Failure degrades to *exactly* the
-zero-demo state, which is a state the page is designed to render anyway.
+Record it in **`local/INVENTORY.json`**, which is gitignored and never
+published:
 
-Three defences make it safe for ~100 appends by ~100 different agents:
-
-1. **The list is optional.** `index.html` reads
-   `Array.isArray(window.DEMOS) ? window.DEMOS : []`. If `demos.js` is
-   missing, or throws while parsing, the page renders its empty state instead
-   of white-screening — a script error in `demos.js` cannot stop the inline
-   render script that follows it.
-2. **Each entry is validated independently.** Every object must have a valid
-   `slug`, `company`, `title`, and `what`; anything else is skipped. One
-   malformed entry costs one missing card, never the grid.
-3. **Nothing is rendered as HTML.** Cards are built with `createElement` and
-   `textContent`, so manifest content cannot inject markup.
-
-The page is also correct with **zero** demos present: the toolbar hides, and
-the empty state explains that demos are on the way. It grows simply by
-appending entries.
-
-### Adding a demo to the list
-
-Append one object to the array in `demos.js`, directly above the
-`APPEND MARKER` comment — see [`TEMPLATE.md`](./TEMPLATE.md) §6:
-
-```js
+```json
 {
-  slug: "streaming-join-playground",
-  company: "Synnada",
-  title: "Streaming Join Playground",
-  what: "Feeds two synthetic event streams into a windowed join and shows rows matching, buffering, and expiring live.",
-  tags: ["streaming", "sql"]
-},
+  "slug": "streaming-join-playground",
+  "company": "Synnada",
+  "title": "Streaming Join Playground",
+  "what": "Feeds two synthetic event streams into a windowed join and shows rows matching, buffering, and expiring live.",
+  "tags": ["streaming", "sql"]
+}
 ```
 
-The card links to `./demos/<slug>/`, so `slug` must match the directory name.
+`slug` must match the directory name under `demos/`. The demo is then
+delivered as its own direct link:
+
+```
+https://aarushkandukoori.github.io/startup-demos/demos/<slug>/
+```
+
+Nothing needs to be added to the site for that link to work — `demos/<slug>/`
+is served because the directory exists, not because it is listed anywhere.
 
 ---
 
@@ -122,9 +148,11 @@ The card links to `./demos/<slug>/`, so `slug` must match the directory name.
 
 Read [`TEMPLATE.md`](./TEMPLATE.md). It is the contract, not a suggestion: it
 covers the required directory layout, the "it must actually work" bar,
-performance, keyboard access, mobile, the exact provenance wording, and what
-is forbidden (logos, borrowed brand colours, affiliation claims, naming a demo
-as if it were a company's product).
+performance, keyboard access, mobile, the exact attribution wording, the
+no-cross-demo-navigation rule, and what is forbidden (logos, borrowed brand
+colours, affiliation claims, naming a demo as if it were a company's
+product). §8 is the mechanical publish gate — a demo ships only when C1–C7
+all pass.
 
 ## Running locally
 

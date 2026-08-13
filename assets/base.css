@@ -824,11 +824,20 @@ table.data tbody tr:hover td {
   border-left-color: var(--warn);
 }
 
-/* The provenance line every demo must carry. */
+/* The attribution line every demo must carry, verbatim, visible on load:
+   "Built by Aarush Kandukoori with AI assistance. An independent mini-demo
+   inspired by <Company>'s public product description; not affiliated with
+   <Company>."  Exact wording and placement: TEMPLATE.md §2.
+
+   Uses --text-muted, not --text-faint: this line is a disclosure, and it has
+   to be comfortably readable. --text-muted clears 4.5:1 on --surface in both
+   themes (5.9:1 light, 7.4:1 dark); --text-faint does not (3.3:1 / 4.3:1).
+   Secondary in the hierarchy, yes — dim to the edge of legibility, no. Do not
+   lighten it, shrink it, or lower its opacity in demo CSS. */
 .provenance {
   font-size: var(--fs-xs);
   line-height: var(--lh-snug);
-  color: var(--text-faint);
+  color: var(--text-muted);
   max-width: var(--measure);
 }
 

@@ -9,9 +9,9 @@ with search-back off — sensitivity, PPV and the sensor-to-alert latency all mo
 because the pipeline actually re-ran.
 
 **Inspired by:** Wearlinq (wearlinq.com) — "eWave: FDA-cleared wireless 6-lead
-wearable ECG with near-real-time AI diagnosis." An independent mini-demo built
-by Aarush Kandukoori, inspired by Wearlinq's public product description. Not
-affiliated with Wearlinq.
+wearable ECG with near-real-time AI diagnosis." Built by Aarush Kandukoori with AI assistance. An independent mini-demo
+inspired by Wearlinq's public product description; not affiliated with
+Wearlinq.
 
 ## How it works
 

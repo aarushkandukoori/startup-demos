@@ -8,9 +8,9 @@ dimension, run tunable evaluators over whole runs with a bootstrap interval on
 the pass rate, and open any run as a span waterfall.
 
 **Inspired by:** Laminar (laminar.sh) — "Open-source observability & evals for
-AI agents — Rust backend, columnar analytics". An independent mini-demo built by
-Aarush Kandukoori, inspired by Laminar's public product description. Not
-affiliated with Laminar.
+AI agents — Rust backend, columnar analytics". Built by Aarush Kandukoori with AI assistance. An independent mini-demo
+inspired by Laminar's public product description; not affiliated with
+Laminar.
 
 ## How it works
 

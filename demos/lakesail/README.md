@@ -9,9 +9,9 @@ data. Toggle a rule off and the plan, the bytes read, the row groups touched and
 the wall time all change, while the answer stays byte-for-byte identical.
 
 **Inspired by:** LakeSail (lakesail.com) — "Sail: Rust drop-in Spark replacement
-built on Apache DataFusion (~4x faster)". An independent mini-demo built by
-Aarush Kandukoori, inspired by LakeSail's public product description. Not
-affiliated with LakeSail.
+built on Apache DataFusion (~4x faster)". Built by Aarush Kandukoori with AI assistance. An independent mini-demo
+inspired by LakeSail's public product description; not affiliated with
+LakeSail.
 
 ## How it works
 

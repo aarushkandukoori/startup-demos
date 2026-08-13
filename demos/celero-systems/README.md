@@ -11,8 +11,9 @@ costs in false doses, missed overdoses, and seconds to rescue.
 
 **Inspired by:** Celero Systems (celerosystems.com) — an ingestible capsule that
 detects opioid overdose and autonomously delivers an antagonist.
-An independent mini-demo built by Aarush Kandukoori, inspired by Celero
-Systems's public product description. Not affiliated with Celero Systems.
+Built by Aarush Kandukoori with AI assistance. An independent mini-demo
+inspired by Celero Systems's public product description; not affiliated with
+Celero Systems.
 
 ## How it works
 

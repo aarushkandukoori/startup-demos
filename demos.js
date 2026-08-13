@@ -1,99 +1,32 @@
 /* ==========================================================================
-   demos.js — the manifest that drives the landing page.
-   Loaded by index.html with a plain <script src="demos.js"></script> tag.
-   No fetch(), no JSON parsing, no build step.
+   demos.js — deliberately empty.
 
-   HOW TO ADD A DEMO
-   -----------------
-   Append one object to the array below, directly above the APPEND MARKER.
-   Do not reformat, reorder, or rewrite existing entries. Do not delete the
-   marker comment. One demo = one object = one commit-sized edit.
+   THIS FILE NO LONGER CARRIES THE DEMO LIST, AND NOTHING LOADS IT.
 
-   Entry schema (all strings; `slug`, `company`, `title`, `what` required):
+   It used to hold one entry per demo and drive a card grid on the landing
+   page. That was a leak: every file at the repository root is served by
+   GitHub Pages, so anyone who received a link to one demo could trim the URL
+   to /demos.js and read the name of every other company we had built for.
+   A demo page is supposed to be sealed (TEMPLATE.md §2, "It is sealed") — a
+   published manifest defeats that no matter how carefully the demo pages
+   themselves are written.
 
-     slug    string   directory name under demos/  — lowercase, hyphens only.
-                      The card links to ./demos/<slug>/
-     company string   the company the demo was inspired by, e.g. "Synnada"
-     title   string   the demo's own generic name, e.g. "Streaming Join
-                      Playground". NEVER name it as if it were the company's
-                      product. See TEMPLATE.md.
-     what    string   one line, plain English, present tense, describing what
-                      the demo DOES when you open it. Not what the company
-                      does. Aim for 90–150 characters.
-     tags    string[] optional, 1–3 short lowercase topic tags.
+   So:
 
-   Example (keep it commented out; it is documentation, not a live entry):
+   - index.html no longer references this file and renders no list, no
+     filter and no count. It enumerates nothing.
+   - The inventory now lives in local/INVENTORY.json, which is gitignored and
+     never published. That is where a new demo gets recorded.
+   - The array below stays as an empty array rather than being deleted, so
+     that anything still requesting /demos.js gets valid, empty JavaScript
+     instead of a 404 page — and so that an agent that appends an entry here
+     out of habit breaks nothing and leaks nothing on its own.
 
-     {
-       slug: "streaming-join-playground",
-       company: "Synnada",
-       title: "Streaming Join Playground",
-       what: "Feeds two synthetic event streams into a windowed join and shows rows matching, buffering, and expiring live.",
-       tags: ["streaming", "sql"]
-     },
+   DO NOT ADD ENTRIES HERE. Add them to local/INVENTORY.json. Anything
+   appended below is published to the open internet.
 
-   A malformed entry can only ever hide itself: index.html validates each
-   object and skips the bad ones. A syntax error in this file leaves
-   window.DEMOS undefined and the page falls back to its empty state — it
-   never white-screens.
+   Each demo is delivered as its own direct link:
+     https://aarushkandukoori.github.io/startup-demos/demos/<slug>/
    ========================================================================== */
 
-window.DEMOS = [
-  {
-    slug: "celero-systems",
-    company: "Celero Systems",
-    title: "Closed-Loop Rescue-Dose Simulator",
-    what: "Replays a rescue-dose detector over 40 synthetic capsule recordings and shows every dose it fires, misses, or false-alarms on.",
-    tags: ["biosignals", "closed-loop"]
-  },
-  {
-    slug: "ceryx-medical",
-    company: "Ceryx Medical",
-    title: "Respiratory-Coupled Pacing Bench",
-    what: "Runs fixed-rate, rate-adaptive and breath-coupled pacing against one synthetic breathing signal and compares what each delivers.",
-    tags: ["closed-loop", "cardiorespiratory", "simulation"]
-  },
-  {
-    slug: "gray-swan-ai",
-    company: "Gray Swan AI",
-    title: "Inline Guardrail Cascade Lab",
-    what: "Runs synthetic agent traffic through a two-stage prompt-injection guardrail and shows what a p99 latency budget makes it miss.",
-    tags: ["guardrails", "latency", "injection"]
-  },
-  {
-    slug: "lakesail",
-    company: "LakeSail",
-    title: "DataFrame Plan Optimizer Playground",
-    what: "Parses a PySpark-style DataFrame program, optimizes the plan, then runs it vectorized and row-at-a-time over synthetic columnar data.",
-    tags: ["sql", "columnar", "optimizer"]
-  },
-  {
-    slug: "laminar",
-    company: "Laminar",
-    title: "Agent Trace Query Console",
-    what: "Filters a synthetic agent-span store one column at a time, times the scan, and scores whole runs with tunable evaluators.",
-    tags: ["observability", "columnar", "evals"]
-  },
-  {
-    slug: "spiral-vortex",
-    company: "Spiral (Vortex)",
-    title: "Cascading Encoding Explorer",
-    what: "Compresses a synthetic telemetry column with cascading encodings and compares its size and single-row lookup cost against a page-compressed baseline.",
-    tags: ["columnar", "compression", "encodings"]
-  },
-  {
-    slug: "synnada",
-    company: "Synnada",
-    title: "Symmetric Hash Join Playground",
-    what: "Streams two synthetic event feeds through a symmetric hash join and evicts buffered rows using a bound derived from the predicate.",
-    tags: ["streaming", "sql", "watermarks"]
-  },
-  {
-    slug: "wearlinq",
-    company: "Wearlinq",
-    title: "Streaming 6-Lead QRS Detector",
-    what: "Streams a synthetic 6-lead ECG through a live Pan-Tompkins detector and scores every beat against ground truth as you add noise and change rhythm.",
-    tags: ["ecg", "dsp", "streaming"]
-  },
-  /* APPEND MARKER — new demo entries go directly above this line. */
-];
+window.DEMOS = [];

@@ -12,9 +12,9 @@ fastest during expiration.
 
 **Inspired by:** Ceryx Medical (ceryxmedical.com) — publicly describes a
 closed-loop cardiac pacing device that paces in real time with the patient's
-breathing, rather than at a fixed or activity-averaged rate. An independent
-mini-demo built by Aarush Kandukoori, inspired by Ceryx Medical's public
-product description. Not affiliated with Ceryx Medical.
+breathing, rather than at a fixed or activity-averaged rate. Built by Aarush Kandukoori with AI assistance. An independent mini-demo
+inspired by Ceryx Medical's public product description; not affiliated with
+Ceryx Medical.
 
 ## How it works
 

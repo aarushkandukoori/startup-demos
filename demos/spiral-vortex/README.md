@@ -15,8 +15,9 @@ every run.
 
 **Inspired by:** Spiral (Vortex) ([spiraldb.com](https://spiraldb.com)) — "Vortex:
 a Rust next-gen columnar file format positioned as Parquet's successor."
-An independent mini-demo built by Aarush Kandukoori, inspired by Spiral
-(Vortex)'s public product description. Not affiliated with Spiral (Vortex).
+Built by Aarush Kandukoori with AI assistance. An independent mini-demo
+inspired by Spiral (Vortex)'s public product description; not affiliated
+with Spiral (Vortex).
 
 ## How it works
 

@@ -37,3 +37,9 @@ node_modules/
 # Publish record consumed by the outreach step. Local pipeline metadata,
 # not part of the site.
 PUBLISHED.json
+
+# Local-only working files. Nothing in here is published, and that is the
+# point: local/INVENTORY.json is the list of every demo and every company,
+# and a list like that served from the site would let any recipient who
+# trims their demo URL see everyone else. Keep it off GitHub Pages.
+local/
