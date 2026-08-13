@@ -33,3 +33,7 @@ $RECYCLE.BIN/
 .claude/
 node_modules/
 *.log
+
+# Publish record consumed by the outreach step. Local pipeline metadata,
+# not part of the site.
+PUBLISHED.json
