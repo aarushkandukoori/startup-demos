@@ -1,0 +1,266 @@
+/* ==========================================================================
+   style.css — only the parts that are unique to this demo.
+   Everything else (colour, type, spacing, buttons, tables, focus rings)
+   comes from ../../assets/base.css and ../../assets/demo-shell.css.
+   No new colours are introduced: the single accent token is reused.
+   ========================================================================== */
+
+.h-panel {
+  font-size: var(--fs-lg);
+  margin: 0;
+}
+
+/* Program editor ---------------------------------------------------------- */
+
+#program {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+  min-height: 11rem;
+  tab-size: 2;
+}
+
+/* Plans ------------------------------------------------------------------- */
+
+.plan-grid {
+  display: grid;
+  gap: var(--s-4);
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+
+@media (min-width: 54rem) {
+  .plan-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.plan-grid > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+pre.plan {
+  margin: 0;
+  font-size: var(--fs-xs);
+  line-height: 1.55;
+  white-space: pre;
+  max-height: 20rem;
+  overflow: auto;
+  min-height: 6rem;
+}
+
+.rules {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.rules li {
+  font-size: var(--fs-sm);
+  line-height: var(--lh-snug);
+  color: var(--text-muted);
+  padding-left: 1.35em;
+  position: relative;
+}
+
+.rules li::before {
+  content: "\2192"; /* → */
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+}
+
+.rules li[data-kind="off"]::before {
+  content: "\00B7"; /* · */
+  color: var(--text-faint);
+}
+
+.rules li[data-kind="hold"]::before {
+  content: "\21E7"; /* ⇧ */
+  color: var(--warn);
+}
+
+.rules .rule-name {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Scan I/O ---------------------------------------------------------------- */
+
+.scan-block {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--s-3) var(--s-4);
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.scan-title {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  margin: 0;
+}
+
+.scan-line {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  margin: 0;
+  max-width: none;
+}
+
+.rg-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.rg {
+  width: 13px;
+  height: 22px;
+  border-radius: 3px;
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  flex: none;
+}
+
+.rg[data-state="skipped"] {
+  border: 1px dashed var(--border-strong);
+  background: transparent;
+  height: 12px;
+  align-self: center;
+}
+
+.cols-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.col-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  padding: 0.18em 0.6em;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+}
+
+.col-chip[data-state="read"] {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.col-chip[data-state="pruned"] {
+  border-style: dashed;
+  color: var(--text-muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.col-chip .col-state {
+  font-family: var(--font-sans);
+  font-size: 0.9em;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+/* The operator column carries its tree depth as leading spaces, so it must
+   not have them collapsed the way a normal table cell would. */
+#ops td.mono {
+  white-space: pre;
+}
+
+/* Timing bars ------------------------------------------------------------- */
+
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 9.5rem minmax(0, 1fr) 5.5rem;
+  align-items: center;
+  gap: var(--s-3);
+  font-size: var(--fs-sm);
+}
+
+@media (max-width: 32rem) {
+  .bar-row {
+    grid-template-columns: minmax(0, 1fr) 5.5rem;
+  }
+  .bar-row .bar-name {
+    grid-column: 1 / -1;
+  }
+}
+
+.bar-name {
+  color: var(--text-muted);
+}
+
+.bar-row .bar {
+  display: block;
+  height: 12px;
+}
+
+.bar-row .bar > span {
+  width: 0;
+}
+
+.bar-value {
+  text-align: right;
+  color: var(--text);
+}
+
+/* The rule checkboxes are the demo's main knobs, so give the whole label a
+   finger-sized hit area rather than the 1rem box alone. */
+.demo-controls .check {
+  min-height: 2.5rem;
+}
+
+/* Catalog in the sidebar --------------------------------------------------- */
+
+.catalog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.catalog-table {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.catalog-table b {
+  display: block;
+  color: var(--text);
+  font-weight: 620;
+}
+
+.legend-swatch-skip {
+  background: transparent;
+  border: 1px dashed var(--border-strong);
+}
+
+/* Result ------------------------------------------------------------------ */
+
+#result-count {
+  margin: 0;
+}

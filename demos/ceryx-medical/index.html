@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Respiratory-Coupled Pacing Bench — mini-demo</title>
+    <meta
+      name="description"
+      content="Run three pacing controllers against one synthetic breathing signal and watch beat-to-beat rate, filling and pulmonary flow change."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="stylesheet" href="../../assets/base.css" />
+    <link rel="stylesheet" href="../../assets/demo-shell.css" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#stage">Skip to the demo</a>
+
+    <header class="demo-header">
+      <div class="wrap">
+        <a class="demo-back" href="../../">All demos</a>
+        <h1 class="demo-title">Respiratory-Coupled Pacing Bench</h1>
+        <p class="demo-sub">
+          One synthetic breathing signal drives three pacing controllers at the
+          same time — fixed rate, rate-adaptive, and a closed loop that
+          modulates every beat with the sensed breath. Change the breathing, the
+          demand, the coupling depth or the sense-to-pace latency and watch what
+          each one delivers.
+        </p>
+        <p class="demo-meta">
+          <span class="tag">closed loop</span>
+          <span class="tag">cardiorespiratory</span>
+          <span class="tag">synthetic data</span>
+        </p>
+        <p class="provenance">
+          An independent mini-demo built by Aarush Kandukoori, inspired by Ceryx
+          Medical's public product description. Not affiliated with Ceryx
+          Medical.
+        </p>
+      </div>
+    </header>
+
+    <main class="demo-main">
+      <div class="wrap">
+        <section id="stage" class="demo-stage" tabindex="-1">
+          <div class="panel">
+            <div class="row row-between stage-head">
+              <h2>Strip chart — last 20 seconds</h2>
+              <span class="status" id="status" data-state="idle">Paused</span>
+            </div>
+
+            <div class="chart-wrap">
+              <canvas
+                id="chart"
+                role="img"
+                aria-describedby="summary"
+                aria-label="Three-lane strip chart: a synthetic breathing waveform with the device's noisy and filtered estimates, a raster of paced beats for each of the three controllers, and the instantaneous paced rate over time. Every value is also reported in the tables below."
+              ></canvas>
+            </div>
+
+            <p class="legend">
+              <span class="legend-item"
+                ><span class="legend-swatch"></span> true airflow</span
+              >
+              <span class="legend-item"
+                ><span class="legend-swatch sw-est"></span> device estimate
+                (delayed + filtered)</span
+              >
+              <span class="legend-item"
+                ><span class="legend-swatch sw-raw"></span> raw sensor
+                signal</span
+              >
+              <span class="legend-item"
+                ><span class="legend-swatch sw-band"></span> inspiration
+                (40% of each breath)</span
+              >
+              <span class="legend-item"
+                ><span class="legend-swatch sw-tick"></span> paced beats, one
+                row per controller</span
+              >
+              <span class="legend-item"
+                >bottom lane: instantaneous rate — the highlighted controller is
+                the solid line with beat dots, the other two are hairlines</span
+              >
+            </p>
+
+            <p class="summary" id="summary" role="status" aria-live="polite">
+              Starting the simulation.
+            </p>
+          </div>
+
+          <div class="panel">
+            <div class="stage-head">
+              <h2>Selected controller, trailing 30&nbsp;s</h2>
+              <p class="hint">
+                Recomputed from the beats actually delivered in the window — not
+                from the commanded rate.
+              </p>
+            </div>
+            <div class="metrics">
+              <div class="metric">
+                <span class="metric-label">Mean paced rate</span>
+                <span class="metric-value"><span id="m-hr">—</span> bpm</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Rate swing (p5–p95)</span>
+                <span class="metric-value"><span id="m-swing">—</span> bpm</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Breathing-locked rate</span>
+                <span class="metric-value"
+                  ><span id="m-ratemod">—</span> bpm</span
+                >
+              </div>
+              <div class="metric">
+                <span class="metric-label">Interval SD (SDNN)</span>
+                <span class="metric-value"><span id="m-sdnn">—</span> ms</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Beats in inspiration</span>
+                <span class="metric-value" id="m-insp">—</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Modelled output</span>
+                <span class="metric-value"><span id="m-co">—</span> L/min</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Demand met</span>
+                <span class="metric-value" id="m-demand">—</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Sense→pace phase error</span>
+                <span class="metric-value" id="m-phase">—</span>
+              </div>
+            </div>
+            <p class="note metric-note">
+              <strong>Breathing-locked rate</strong> is the part of the paced
+              rate that is genuinely in phase with the breath: the slope of a
+              least-squares fit of instantaneous rate against the breathing
+              waveform, times that waveform's RMS. Zero means the pacing ignores
+              breathing. Negative means the loop is running late enough that the
+              heart is speeding up during expiration instead — push the latency
+              slider up and watch it cross zero. Modelled demand right now is
+              <span id="demand-target">—</span>.
+            </p>
+          </div>
+
+          <div class="panel">
+            <div class="stage-head">
+              <h2>All three controllers, same breath</h2>
+              <p class="hint">
+                They run simultaneously on one respiratory signal, so the
+                differences are the controllers, not the scenario. Inspiration
+                is 40% of every breath, so a controller that ignores breathing
+                sits near 40% inspiratory beats.
+              </p>
+            </div>
+            <div class="table-scroll">
+              <table class="data">
+                <caption class="sr-only">
+                  Live comparison of the three pacing controllers over the
+                  trailing 30 seconds of simulation.
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Controller</th>
+                    <th scope="col" class="num">Mean rate</th>
+                    <th scope="col" class="num">Rate swing</th>
+                    <th scope="col" class="num">Breathing-locked</th>
+                    <th scope="col" class="num">Insp. beats</th>
+                    <th scope="col" class="num">Output</th>
+                    <th scope="col" class="num">Demand met</th>
+                    <th scope="col" class="num">Flow in phase</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr id="row-fixed">
+                    <th scope="row" class="strategy-cell">
+                      Fixed rate<span class="tag sel-tag" id="sel-fixed" hidden
+                        >shown</span
+                      >
+                    </th>
+                    <td class="num"><span id="c-fixed-hr">—</span> bpm</td>
+                    <td class="num"><span id="c-fixed-swing">—</span> bpm</td>
+                    <td class="num"><span id="c-fixed-ratemod">—</span> bpm</td>
+                    <td class="num" id="c-fixed-insp">—</td>
+                    <td class="num"><span id="c-fixed-co">—</span> L/min</td>
+                    <td class="num" id="c-fixed-demand">—</td>
+                    <td class="num" id="c-fixed-inphase">—</td>
+                  </tr>
+                  <tr id="row-adaptive">
+                    <th scope="row" class="strategy-cell">
+                      Rate-adaptive<span
+                        class="tag sel-tag"
+                        id="sel-adaptive"
+                        hidden
+                        >shown</span
+                      >
+                    </th>
+                    <td class="num"><span id="c-adaptive-hr">—</span> bpm</td>
+                    <td class="num"><span id="c-adaptive-swing">—</span> bpm</td>
+                    <td class="num">
+                      <span id="c-adaptive-ratemod">—</span> bpm
+                    </td>
+                    <td class="num" id="c-adaptive-insp">—</td>
+                    <td class="num"><span id="c-adaptive-co">—</span> L/min</td>
+                    <td class="num" id="c-adaptive-demand">—</td>
+                    <td class="num" id="c-adaptive-inphase">—</td>
+                  </tr>
+                  <tr id="row-coupled">
+                    <th scope="row" class="strategy-cell">
+                      Respiratory-coupled<span
+                        class="tag sel-tag"
+                        id="sel-coupled"
+                        hidden
+                        >shown</span
+                      >
+                    </th>
+                    <td class="num"><span id="c-coupled-hr">—</span> bpm</td>
+                    <td class="num"><span id="c-coupled-swing">—</span> bpm</td>
+                    <td class="num">
+                      <span id="c-coupled-ratemod">—</span> bpm
+                    </td>
+                    <td class="num" id="c-coupled-insp">—</td>
+                    <td class="num"><span id="c-coupled-co">—</span> L/min</td>
+                    <td class="num" id="c-coupled-demand">—</td>
+                    <td class="num" id="c-coupled-inphase">—</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="note metric-note">
+              Three things to try. Drag <em>metabolic demand</em> up and the
+              fixed-rate row falls behind on output while the other two climb
+              over about half a minute. Drag <em>respiratory swing</em> and only
+              the coupled row's breathing-locked rate moves. Drag
+              <em>sense→pace latency</em> past a quarter of a breath and the
+              coupled row's advantage decays, then inverts — that number is the
+              whole argument for keeping the loop fast.
+            </p>
+          </div>
+
+          <div class="panel">
+            <div class="stage-head">
+              <h2>What is actually being computed</h2>
+            </div>
+            <ul class="how-list">
+              <li>
+                <strong>Breathing</strong> is a zero-mean airflow-shaped wave —
+                a short inspiratory hump over 40% of the cycle, a longer,
+                shallower expiratory trough — with seeded breath-to-breath
+                period jitter.
+              </li>
+              <li>
+                <strong>Sensing</strong> passes that wave through a transport
+                delay, a slow wandering artefact, and a 70&nbsp;ms one-pole
+                filter. The controller only ever sees the filtered estimate, so
+                its own latency is part of the loop.
+              </li>
+              <li>
+                <strong>Pacing</strong> is integrate-and-fire: each controller
+                advances a phase at the commanded rate and emits a beat when the
+                phase wraps, so intervals fall out of the command rather than
+                being scheduled.
+              </li>
+              <li>
+                <strong>Haemodynamics</strong> is a filling curve —
+                stroke volume saturates as
+                <span class="mono">1 − e<sup>−RR/470&nbsp;ms</sup></span> — times
+                a ±14% respiratory preload swing and a contractility term that
+                rises with demand. Output is the stroke volumes actually ejected
+                in the window, divided by the window.
+              </li>
+              <li>
+                <strong>Nothing here is measured or clinical.</strong> The
+                haemodynamic model is a teaching-grade approximation: it
+                deliberately does <em>not</em> produce a large output jump for
+                respiratory coupling, because that would be a claim this
+                simulation cannot support. What it does show is the phase
+                relationship, and how latency destroys it.
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <aside class="demo-controls" aria-label="Controls">
+          <div class="control-group">
+            <p class="eyebrow" id="strategy-label">Highlighted controller</p>
+            <div
+              class="segmented segmented-block"
+              role="group"
+              aria-labelledby="strategy-label"
+            >
+              <button
+                class="btn btn-sm"
+                type="button"
+                data-mode="fixed"
+                aria-pressed="false"
+              >
+                Fixed
+              </button>
+              <button
+                class="btn btn-sm"
+                type="button"
+                data-mode="adaptive"
+                aria-pressed="false"
+              >
+                Rate-adaptive
+              </button>
+              <button
+                class="btn btn-sm"
+                type="button"
+                data-mode="coupled"
+                aria-pressed="true"
+              >
+                Coupled
+              </button>
+            </div>
+            <p class="hint">
+              All three run at once. This picks which one is drawn in the accent
+              colour and reported in the metric tiles.
+            </p>
+          </div>
+
+          <div class="control-group">
+            <p class="eyebrow" id="preset-label">Scenario</p>
+            <div
+              class="control-actions"
+              role="group"
+              aria-labelledby="preset-label"
+            >
+              <button class="btn btn-sm" type="button" data-preset="rest">
+                Rest
+              </button>
+              <button class="btn btn-sm" type="button" data-preset="walk">
+                Brisk walk
+              </button>
+              <button class="btn btn-sm" type="button" data-preset="stairs">
+                Stair climb
+              </button>
+            </div>
+            <p class="hint">
+              Sets breathing rate, tidal depth and metabolic demand together.
+              Device settings below are left alone.
+            </p>
+          </div>
+
+          <div class="control-group">
+            <p class="eyebrow">Device settings</p>
+
+            <div class="field">
+              <label class="control-readout" for="baseRate">
+                <span>Base pacing rate</span>
+                <output id="baseRate-out" for="baseRate">62 bpm</output>
+              </label>
+              <input
+                id="baseRate"
+                type="range"
+                min="45"
+                max="85"
+                step="1"
+                value="62"
+              />
+            </div>
+
+            <div class="field">
+              <label class="control-readout" for="rsaDepth">
+                <span>Respiratory swing (peak-to-peak)</span>
+                <output id="rsaDepth-out" for="rsaDepth">18 bpm</output>
+              </label>
+              <input
+                id="rsaDepth"
+                type="range"
+                min="0"
+                max="30"
+                step="1"
+                value="18"
+              />
+              <p class="hint">Coupled controller only. 0 makes it rate-adaptive.</p>
+            </div>
+
+            <div class="field">
+              <label class="control-readout" for="latency">
+                <span>Sense→pace latency</span>
+                <output id="latency-out" for="latency">120 ms</output>
+              </label>
+              <input
+                id="latency"
+                type="range"
+                min="0"
+                max="1200"
+                step="20"
+                value="120"
+              />
+              <p class="hint">
+                Phase error at the current breathing rate:
+                <span id="phase-val" class="phase-ok">—</span>
+              </p>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <p class="eyebrow">Patient &amp; sensor</p>
+
+            <div class="field">
+              <label class="control-readout" for="breathRate">
+                <span>Breathing rate</span>
+                <output id="breathRate-out" for="breathRate">12 / min</output>
+              </label>
+              <input
+                id="breathRate"
+                type="range"
+                min="8"
+                max="30"
+                step="1"
+                value="12"
+              />
+            </div>
+
+            <div class="field">
+              <label class="control-readout" for="activity">
+                <span>Metabolic demand</span>
+                <output id="activity-out" for="activity">10%</output>
+              </label>
+              <input
+                id="activity"
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value="10"
+              />
+              <p class="hint">
+                The rate-adaptive term follows this with a 16&nbsp;s time
+                constant, so give it half a minute to settle.
+              </p>
+            </div>
+
+            <div class="field">
+              <label class="control-readout" for="breathVar">
+                <span>Breath-to-breath variability</span>
+                <output id="breathVar-out" for="breathVar">8%</output>
+              </label>
+              <input
+                id="breathVar"
+                type="range"
+                min="0"
+                max="40"
+                step="5"
+                value="8"
+              />
+            </div>
+
+            <div class="field">
+              <label class="control-readout" for="noise">
+                <span>Sensor artefact</span>
+                <output id="noise-out" for="noise">10%</output>
+              </label>
+              <input
+                id="noise"
+                type="range"
+                min="0"
+                max="45"
+                step="5"
+                value="10"
+              />
+              <p class="hint">
+                Slow wandering, so the filter cannot average it away — it
+                inflates rate swing without adding anything in phase.
+              </p>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <p class="eyebrow" id="speed-label">Simulation speed</p>
+            <div
+              class="segmented segmented-block"
+              role="group"
+              aria-labelledby="speed-label"
+            >
+              <button
+                class="btn btn-sm"
+                type="button"
+                data-speed="1"
+                aria-pressed="true"
+              >
+                1× real time
+              </button>
+              <button
+                class="btn btn-sm"
+                type="button"
+                data-speed="4"
+                aria-pressed="false"
+              >
+                4×
+              </button>
+            </div>
+            <div class="control-actions">
+              <button class="btn btn-primary" type="button" id="run">
+                Start
+              </button>
+              <button class="btn" type="button" id="step">Step 10 s</button>
+              <button class="btn" type="button" id="reset">Reset</button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <footer class="demo-footer">
+      <div class="wrap">
+        <span
+          >All data on this page is synthetic and generated in-browser from a
+          seeded generator. Nothing here is measured, clinical, or a medical
+          device.</span
+        >
+        <a href="../../">Back to all demos</a>
+      </div>
+    </footer>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

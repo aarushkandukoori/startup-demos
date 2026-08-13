@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Inline Guardrail Cascade Lab — mini-demo</title>
+    <meta
+      name="description"
+      content="A two-stage prompt-injection guardrail runs over a synthetic agent-traffic stream, and a p99 latency budget decides how many deep checks actually finish."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="stylesheet" href="../../assets/base.css" />
+    <link rel="stylesheet" href="../../assets/demo-shell.css" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#stage">Skip to the demo</a>
+
+    <header class="demo-header">
+      <div class="wrap">
+        <a class="demo-back" href="../../">All demos</a>
+        <h1 class="demo-title">Inline Guardrail Cascade Lab</h1>
+        <p class="demo-sub">
+          A synthetic stream of agent traffic — user turns, tool output and
+          retrieved documents — runs through a cheap Stage&nbsp;A detector and an
+          expensive Stage&nbsp;B deep check. Tighten the p99 latency budget and
+          watch which attacks stop being caught.
+        </p>
+        <p class="demo-meta">
+          <span class="tag">guardrails</span>
+          <span class="tag">latency budget</span>
+          <span class="tag">synthetic data</span>
+        </p>
+        <p class="provenance">
+          An independent mini-demo built by Aarush Kandukoori, inspired by Gray
+          Swan AI's public product description. Not affiliated with Gray Swan
+          AI.
+        </p>
+      </div>
+    </header>
+
+    <main class="demo-main">
+      <div class="wrap">
+        <section id="stage" class="demo-stage" tabindex="-1">
+          <!-- 1. Operating point -->
+          <div class="panel">
+            <div class="row row-between">
+              <h2 class="h-sm">Operating point</h2>
+              <span class="status" id="run-status" data-state="running"
+                >simulated inline</span
+              >
+            </div>
+            <p class="summary" id="summary" role="status">
+              Generating the traffic sample…
+            </p>
+            <div class="metrics" id="metrics"></div>
+            <p class="note" id="cost-note">
+              The detector logic is real and runs in this page; the per-event
+              milliseconds are a cost model (Stage&nbsp;A is length-proportional,
+              Stage&nbsp;B adds a decode and normalisation pass). The admission
+              controller checks the rolling p99 over the last 100 events, so
+              roughly one event in a hundred is still allowed to exceed the
+              budget — that is what a p99 target means.
+            </p>
+          </div>
+
+          <!-- 2. Threshold sweep -->
+          <div class="panel">
+            <h2 class="h-sm">Block threshold sweep</h2>
+            <p class="muted small">
+              Every event keeps the score the cascade actually produced under the
+              current budget; only the block threshold moves. The dashed vertical
+              line is where you have it now.
+            </p>
+            <div class="chart-box scroll-x">
+              <svg
+                id="sweep"
+                viewBox="0 0 640 250"
+                preserveAspectRatio="xMidYMid meet"
+                role="img"
+                aria-labelledby="sweep-desc"
+              ></svg>
+            </div>
+            <p class="chart-desc" id="sweep-desc" aria-live="polite"></p>
+            <p class="legend" aria-hidden="true">
+              <span class="legend-item"
+                ><span class="legend-swatch sw-recall"></span>attacks
+                blocked</span
+              >
+              <span class="legend-item"
+                ><span class="legend-swatch sw-fp"></span>benign blocked</span
+              >
+            </p>
+          </div>
+
+          <!-- 3. Latency -->
+          <div class="panel">
+            <h2 class="h-sm">Per-event latency</h2>
+            <p class="muted small">
+              One bar per event, in arrival order. Tall bars are events that got
+              the Stage&nbsp;B deep check. When the rolling p99 would breach the
+              budget, the deep check is refused and the bar stays short.
+            </p>
+            <div class="chart-box scroll-x">
+              <svg
+                id="lat"
+                viewBox="0 0 640 170"
+                preserveAspectRatio="xMidYMid meet"
+                role="img"
+                aria-labelledby="lat-desc"
+              ></svg>
+            </div>
+            <p class="chart-desc" id="lat-desc" aria-live="polite"></p>
+            <p class="legend" aria-hidden="true">
+              <span class="legend-item"
+                ><span class="legend-swatch sw-deep"></span>deep check ran</span
+              >
+              <span class="legend-item"
+                ><span class="legend-swatch sw-shallow"></span>Stage A only</span
+              >
+              <span class="legend-item"
+                ><span class="legend-swatch sw-timeout"></span>refused on
+                budget</span
+              >
+            </p>
+          </div>
+
+          <!-- 4. Per-family results -->
+          <div class="panel">
+            <h2 class="h-sm">Recall by attack family</h2>
+            <p class="muted small">
+              Which families survive the current settings. The encoded and
+              obfuscated families are the ones that only Stage&nbsp;B can read.
+            </p>
+            <div class="table-scroll">
+              <table class="data" id="family-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Family</th>
+                    <th scope="col" class="num">n</th>
+                    <th scope="col" class="num">blocked</th>
+                    <th scope="col" class="num">flagged</th>
+                    <th scope="col" class="num">allowed</th>
+                    <th scope="col" class="num">deep-checked</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 5. Decision stream -->
+          <div class="panel">
+            <div class="row row-between">
+              <h2 class="h-sm">Decision stream</h2>
+              <div class="field field-inline">
+                <label for="filter">Show</label>
+                <select id="filter">
+                  <option value="all">everything</option>
+                  <option value="attacks">attacks only</option>
+                  <option value="benign">benign only</option>
+                  <option value="blocked">blocked</option>
+                  <option value="missed">missed attacks</option>
+                  <option value="falseblock">false blocks</option>
+                  <option value="deep">deep-checked</option>
+                  <option value="refused">refused on budget</option>
+                </select>
+              </div>
+            </div>
+            <p class="muted small">
+              Ground truth is shown because this is a lab — the detector never
+              sees it. Select a row to see exactly which features fired.
+            </p>
+            <div class="scroll-x">
+              <div class="stream" id="stream" aria-label="Decision stream"></div>
+            </div>
+            <p class="muted small" id="stream-count" role="status"></p>
+            <div class="detail" id="detail" aria-live="polite">
+              <p class="muted small">
+                Select an event above to see its feature breakdown.
+              </p>
+            </div>
+          </div>
+
+          <!-- 6. Probe -->
+          <div class="panel">
+            <h2 class="h-sm">Score your own text</h2>
+            <p class="muted small">
+              Runs the same two functions the stream uses. Nothing leaves the
+              page; nothing is stored.
+            </p>
+            <div class="field">
+              <label for="probe-text">Message body</label>
+              <textarea id="probe-text" rows="4" spellcheck="false"></textarea>
+            </div>
+            <div class="row probe-row">
+              <div class="field field-inline">
+                <label for="probe-channel">Channel</label>
+                <select id="probe-channel">
+                  <option value="user">user turn</option>
+                  <option value="tool_output">tool output</option>
+                  <option value="retrieved_doc">retrieved document</option>
+                </select>
+              </div>
+              <button class="btn btn-primary" type="button" id="probe-run">
+                Score it
+              </button>
+            </div>
+            <div class="row sample-row">
+              <span class="eyebrow">Load a sample</span>
+              <button class="btn btn-sm" type="button" data-sample="benign">
+                benign, security topic
+              </button>
+              <button class="btn btn-sm" type="button" data-sample="quoted">
+                quoted attack in a doc
+              </button>
+              <button class="btn btn-sm" type="button" data-sample="encoded">
+                base64 payload
+              </button>
+              <button class="btn btn-sm" type="button" data-sample="leet">
+                obfuscated override
+              </button>
+            </div>
+            <div class="detail" id="probe-out" aria-live="polite">
+              <p class="muted small">No text scored yet.</p>
+            </div>
+          </div>
+        </section>
+
+        <aside class="demo-controls" aria-label="Controls">
+          <div class="control-group">
+            <p class="eyebrow">Decision thresholds</p>
+            <div class="field">
+              <label class="control-readout" for="block">
+                <span>Block at score ≥</span>
+                <output id="block-out" for="block">0.60</output>
+              </label>
+              <input
+                id="block"
+                type="range"
+                min="0.10"
+                max="0.95"
+                step="0.01"
+                value="0.60"
+              />
+            </div>
+            <div class="field">
+              <label class="control-readout" for="flag">
+                <span>Flag at score ≥</span>
+                <output id="flag-out" for="flag">0.30</output>
+              </label>
+              <input
+                id="flag"
+                type="range"
+                min="0.02"
+                max="0.95"
+                step="0.01"
+                value="0.30"
+              />
+              <p class="hint">Clamped to stay at or below the block threshold.</p>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <p class="eyebrow">Cascade</p>
+            <div class="field">
+              <label class="control-readout" for="floor">
+                <span>Deep-check floor</span>
+                <output id="floor-out" for="floor">0.06</output>
+              </label>
+              <input
+                id="floor"
+                type="range"
+                min="0.01"
+                max="0.90"
+                step="0.01"
+                value="0.06"
+              />
+              <p class="hint">
+                Stage B is requested for any event Stage A scores at or above
+                this. Events scoring ≥ 0.95 are blocked without one.
+              </p>
+            </div>
+            <div class="field">
+              <label class="control-readout" for="budget">
+                <span>p99 latency budget</span>
+                <output id="budget-out" for="budget">14.0 ms</output>
+              </label>
+              <input
+                id="budget"
+                type="range"
+                min="2"
+                max="40"
+                step="0.5"
+                value="14"
+              />
+            </div>
+            <div class="field">
+              <label for="policy">When the budget would break</label>
+              <select id="policy">
+                <option value="open">skip the deep check (fail open)</option>
+                <option value="closed">block on timeout (fail closed)</option>
+                <option value="always">ignore the budget (always deep)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <p class="eyebrow">Traffic</p>
+            <div class="field">
+              <label class="control-readout" for="mix">
+                <span>Attack share</span>
+                <output id="mix-out" for="mix">20%</output>
+              </label>
+              <input
+                id="mix"
+                type="range"
+                min="5"
+                max="50"
+                step="1"
+                value="20"
+              />
+            </div>
+            <p class="hint" id="seed-line">Seed 20260813 · 240 events</p>
+          </div>
+
+          <div class="control-actions">
+            <button class="btn" type="button" id="reseed">New sample</button>
+            <button class="btn" type="button" id="reset">Reset</button>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <footer class="demo-footer">
+      <div class="wrap">
+        <span
+          >All data on this page is synthetic and generated in-browser. No
+          network calls, no storage.</span
+        >
+        <a href="../../">Back to all demos</a>
+      </div>
+    </footer>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

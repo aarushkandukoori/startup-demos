@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Closed-Loop Rescue-Dose Simulator — mini-demo</title>
+    <meta
+      name="description"
+      content="Tune a respiratory-depression detector over synthetic ingestible-sensor recordings and see when it autonomously releases a rescue dose."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="../../assets/base.css" />
+    <link rel="stylesheet" href="../../assets/demo-shell.css" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#stage">Skip to the demo</a>
+
+    <header class="demo-header">
+      <div class="wrap">
+        <a class="demo-back" href="../../">All demos</a>
+        <h1 class="demo-title">Closed-Loop Rescue-Dose Simulator</h1>
+        <p class="demo-sub">
+          Forty synthetic recordings from a simulated ingestible sensor —
+          breathing rate, heart rate, signal quality. Tune the detector that
+          decides when to autonomously release a rescue dose, and watch what
+          it saves, misses, and false-fires on.
+        </p>
+        <p class="demo-meta">
+          <span class="tag">closed-loop control</span>
+          <span class="tag">biosignal detection</span>
+          <span class="tag">synthetic data</span>
+        </p>
+        <p class="provenance">
+          An independent mini-demo built by Aarush Kandukoori, inspired by
+          Celero Systems's public product description. Not affiliated with
+          Celero Systems.
+        </p>
+      </div>
+    </header>
+
+    <main class="demo-main">
+      <div class="wrap">
+        <section id="stage" class="demo-stage" tabindex="-1">
+          <!-- ============ Episode viewer ============ -->
+          <div class="panel">
+            <div class="ep-head">
+              <div class="field ep-select">
+                <label for="episode">Recording</label>
+                <select id="episode"></select>
+              </div>
+              <div class="ep-transport">
+                <button class="btn" type="button" id="play">Play</button>
+                <button class="btn" type="button" id="rewind">Rewind</button>
+              </div>
+            </div>
+
+            <div class="field scrub-field">
+              <label class="control-readout" for="scrub">
+                <span>Playback position</span>
+                <output id="scrub-out" for="scrub">10:00</output>
+              </label>
+              <input
+                id="scrub"
+                type="range"
+                min="0"
+                max="599"
+                step="1"
+                value="599"
+              />
+            </div>
+
+            <p class="decision" id="decision" role="status" aria-live="polite">
+              Loading recording…
+            </p>
+
+            <div class="readouts" id="readouts"></div>
+
+            <h2 class="chart-h">Breathing rate <span class="faint">(breaths / min)</span></h2>
+            <div class="chartbox" id="chart-rr"></div>
+            <div class="chartbox ribbonbox" id="chart-ribbon"></div>
+            <p class="legend" id="legend">
+              <span class="legend-item"><span class="legend-swatch sw-monitor"></span>Monitoring</span>
+              <span class="legend-item"><span class="legend-swatch sw-armed"></span>Armed</span>
+              <span class="legend-item"><span class="legend-swatch sw-confirm"></span>Confirm hold</span>
+              <span class="legend-item"><span class="legend-swatch sw-dosed"></span>Dose released</span>
+              <span class="legend-item"><span class="legend-swatch sw-mask"></span>Artifact-gated</span>
+            </p>
+
+            <h2 class="chart-h">Heart rate <span class="faint">(bpm)</span></h2>
+            <div class="chartbox" id="chart-hr"></div>
+
+            <h2 class="chart-h">Signal quality <span class="faint">(0–1, from sensor coupling)</span></h2>
+            <div class="chartbox" id="chart-sqi"></div>
+
+            <h2 class="chart-h">Decision log</h2>
+            <div class="log" id="log" tabindex="0" role="log" aria-label="Detector decision log for the selected recording"></div>
+          </div>
+
+          <!-- ============ Cohort metrics ============ -->
+          <div class="panel">
+            <h2 class="chart-h">Whole cohort, current settings</h2>
+            <p class="muted small">
+              The same detector is replayed over all 40 synthetic recordings
+              every time you move a knob.
+            </p>
+            <div class="metrics" id="metrics"></div>
+            <p class="note" id="guardrail" role="status" aria-live="polite"></p>
+
+            <h2 class="chart-h">Sustain window sweep</h2>
+            <p class="muted small">
+              Every other setting held fixed, the sustain window swept from 10 s
+              to 90 s across the whole cohort.
+            </p>
+            <div class="chartbox" id="chart-sweep"></div>
+            <p class="legend">
+              <span class="legend-item"><span class="legend-swatch sw-fp"></span>False doses (solid, circles)</span>
+              <span class="legend-item"><span class="legend-swatch sw-fn"></span>Missed overdoses (dashed, squares)</span>
+              <span class="legend-item"><span class="legend-swatch sw-late"></span>Rescues slower than 120 s (dotted, diamonds)</span>
+            </p>
+            <p class="muted small" id="sweep-caption"></p>
+          </div>
+
+          <!-- ============ Episode table ============ -->
+          <div class="panel">
+            <div class="ep-head">
+              <h2 class="chart-h flush">Per-recording outcomes</h2>
+              <div class="field ep-select">
+                <label for="filter">Show</label>
+                <select id="filter">
+                  <option value="all">All 40 recordings</option>
+                  <option value="needs">Overdoses only</option>
+                  <option value="benign">Non-overdoses only</option>
+                  <option value="fp">False doses only</option>
+                  <option value="fn">Missed overdoses only</option>
+                </select>
+              </div>
+            </div>
+            <div class="table-scroll tallish">
+              <table class="data">
+                <thead>
+                  <tr>
+                    <th scope="col">ID</th>
+                    <th scope="col">Scenario</th>
+                    <th scope="col">Truth</th>
+                    <th scope="col">Decision</th>
+                    <th scope="col" class="num">Time to dose</th>
+                    <th scope="col" class="num">Min RR</th>
+                    <th scope="col">Outcome</th>
+                    <th scope="col"><span class="sr-only">Open recording</span></th>
+                  </tr>
+                </thead>
+                <tbody id="rows"></tbody>
+              </table>
+            </div>
+            <div id="table-empty" hidden class="empty">
+              <h3>Nothing matches that filter</h3>
+              <p>
+                With the current detector settings there are no recordings in
+                this category. Loosen the detector — a shorter sustain window
+                or a higher breathing-rate threshold — and they will appear.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ Controls ============ -->
+        <aside class="demo-controls" aria-label="Detector settings">
+          <div class="control-group">
+            <p class="eyebrow">Trigger condition</p>
+            <div class="field">
+              <label class="control-readout" for="rrThresh">
+                <span>Breathing rate at or below</span>
+                <output id="rrThresh-out" for="rrThresh">6</output>
+              </label>
+              <input id="rrThresh" type="range" min="2" max="12" step="0.5" value="6" />
+              <p class="hint">Breaths per minute. Higher catches shallower depression — and healthy sleepers.</p>
+            </div>
+            <div class="field">
+              <label class="check" for="requireBrady">
+                <input id="requireBrady" type="checkbox" checked />
+                <span>Also require bradycardia</span>
+              </label>
+              <label class="control-readout" for="hrThresh">
+                <span>Heart rate at or below</span>
+                <output id="hrThresh-out" for="hrThresh">48</output>
+              </label>
+              <input id="hrThresh" type="range" min="35" max="65" step="1" value="48" />
+              <p class="hint">Corroboration channel. Rejects apnea readings that are not accompanied by a falling heart rate.</p>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <p class="eyebrow">Timing</p>
+            <div class="field">
+              <label class="control-readout" for="sustainSec">
+                <span>Sustain window</span>
+                <output id="sustainSec-out" for="sustainSec">35 s</output>
+              </label>
+              <input id="sustainSec" type="range" min="10" max="90" step="5" value="35" />
+              <p class="hint">Uninterrupted seconds of evidence before the detector arms a dose.</p>
+            </div>
+            <div class="field">
+              <label class="control-readout" for="confirmSec">
+                <span>Confirm hold</span>
+                <output id="confirmSec-out" for="confirmSec">10 s</output>
+              </label>
+              <input id="confirmSec" type="range" min="0" max="30" step="5" value="10" />
+              <p class="hint">Last chance to abort: any recovery inside this window withholds the dose.</p>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <p class="eyebrow">Sensor</p>
+            <div class="field">
+              <label class="control-readout" for="minSqi">
+                <span>Reject samples below quality</span>
+                <output id="minSqi-out" for="minSqi">0.55</output>
+              </label>
+              <input id="minSqi" type="range" min="0" max="0.95" step="0.05" value="0.55" />
+              <p class="hint">Artifact gate. Over 20 s of gated data clears accrued evidence.</p>
+            </div>
+            <div class="field">
+              <label for="duty">Sensor wakes every</label>
+              <select id="duty">
+                <option value="1">1 s — continuous</option>
+                <option value="2">2 s</option>
+                <option value="5" selected>5 s</option>
+                <option value="10">10 s</option>
+                <option value="15">15 s</option>
+              </select>
+              <p class="hint">Duty cycle. Longer sleep buys battery life and coarsens the evidence timer.</p>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <p class="eyebrow">Presets</p>
+            <div class="control-actions">
+              <button class="btn btn-sm" type="button" id="preset-aggressive">Aggressive</button>
+              <button class="btn btn-sm" type="button" id="preset-balanced">Balanced</button>
+              <button class="btn btn-sm" type="button" id="preset-conservative">Conservative</button>
+            </div>
+          </div>
+
+          <div class="control-actions">
+            <button class="btn btn-primary" type="button" id="reseed">New cohort</button>
+            <button class="btn" type="button" id="reset">Reset settings</button>
+          </div>
+          <p class="hint" id="seed-line"></p>
+        </aside>
+      </div>
+    </main>
+
+    <footer class="demo-footer">
+      <div class="wrap">
+        <span>
+          All physiology on this page is synthetic, generated in-browser from a
+          seeded random number generator. No patient data, no network calls, no
+          medical claims.
+        </span>
+        <a href="../../">Back to all demos</a>
+      </div>
+    </footer>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

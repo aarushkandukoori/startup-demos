@@ -1,0 +1,277 @@
+/* ==========================================================================
+   demo-shell.css — optional layout primitives for a single demo page.
+   Load AFTER base.css (it uses base.css tokens and adds no new colours):
+
+     <link rel="stylesheet" href="../../assets/base.css">
+     <link rel="stylesheet" href="../../assets/demo-shell.css">
+
+   Expected skeleton:
+
+     <header class="demo-header"> … .demo-back / h1 / .demo-sub / .provenance
+     <main class="demo-main">
+       <section class="demo-stage">   <!-- the working area -->
+       <aside class="demo-controls">  <!-- knobs, inputs, legend -->
+     <footer class="demo-footer">
+
+   The stage comes first in the DOM (so keyboard and screen-reader users hit
+   the demo before the knobs); on wide screens the controls sit to the right.
+   ========================================================================== */
+
+/* Header ------------------------------------------------------------------ */
+
+.demo-header {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  padding-block: var(--s-5) var(--s-5);
+}
+
+.demo-header > .wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.demo-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  align-self: flex-start;
+  font-size: var(--fs-sm);
+  font-weight: 560;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.demo-back:hover {
+  color: var(--accent);
+}
+
+.demo-back::before {
+  content: "\2190"; /* ← */
+}
+
+.demo-title {
+  font-size: var(--fs-xl);
+  margin: 0;
+}
+
+.demo-sub {
+  font-size: var(--fs-base);
+  color: var(--text-muted);
+  max-width: var(--measure);
+  margin: 0;
+}
+
+.demo-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+/* The provenance note lives in the header and must stay visible without
+   scrolling on a phone — never collapse it behind a disclosure. */
+.demo-header .provenance {
+  padding-top: var(--s-2);
+  border-top: 1px solid var(--border);
+}
+
+/* Main -------------------------------------------------------------------- */
+
+.demo-main {
+  padding-block: var(--s-6);
+}
+
+.demo-main > .wrap {
+  display: grid;
+  gap: var(--s-5);
+  align-items: start;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 62rem) {
+  .demo-main > .wrap {
+    grid-template-columns: minmax(0, 1fr) 20rem;
+  }
+
+  /* Sticky knobs on desktop only; on mobile they scroll with the page. */
+  .demo-controls {
+    position: sticky;
+    top: var(--s-5);
+  }
+}
+
+/* Stage — the working area (canvas, table, board, editor …). */
+.demo-stage {
+  min-width: 0; /* lets wide children scroll instead of blowing out the grid */
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.demo-stage > .panel {
+  min-width: 0;
+}
+
+/* Anything that can overflow horizontally goes in one of these. */
+.scroll-x {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+/* Controls sidebar -------------------------------------------------------- */
+
+.demo-controls {
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--s-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.control-group > h2,
+.control-group > h3,
+.control-group > .eyebrow {
+  margin: 0;
+}
+
+.control-group + .control-group {
+  padding-top: var(--s-5);
+  border-top: 1px solid var(--border);
+}
+
+.control-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.control-actions .btn {
+  flex: 1 1 auto;
+}
+
+/* A label with its live value on the right — the standard slider row. */
+.control-readout {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  font-size: var(--fs-sm);
+  font-weight: 560;
+  color: var(--text-muted);
+}
+
+.control-readout output,
+.control-readout .value {
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+/* Legend ------------------------------------------------------------------ */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-4);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.legend-swatch {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 3px;
+  background: var(--accent);
+  flex: none;
+}
+
+/* Log / event stream ------------------------------------------------------ */
+
+.log {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  line-height: 1.55;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--s-3);
+  max-height: 16rem;
+  overflow-y: auto;
+  overflow-x: auto;
+  margin: 0;
+}
+
+.log-row {
+  display: flex;
+  gap: var(--s-3);
+  white-space: pre;
+}
+
+.log-time {
+  color: var(--text-faint);
+  flex: none;
+}
+
+/* Status pill ------------------------------------------------------------- */
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--fs-xs);
+  font-weight: 560;
+  color: var(--text-muted);
+}
+
+.status::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--text-faint);
+  flex: none;
+}
+
+.status[data-state="running"]::before {
+  background: var(--accent);
+}
+
+.status[data-state="warn"]::before {
+  background: var(--warn);
+}
+
+.status[data-state="error"]::before {
+  background: var(--danger);
+}
+
+/* Footer ------------------------------------------------------------------ */
+
+.demo-footer {
+  border-top: 1px solid var(--border);
+  margin-top: var(--s-7);
+  padding-block: var(--s-5) var(--s-6);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.demo-footer .wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3) var(--s-5);
+  justify-content: space-between;
+  align-items: baseline;
+}

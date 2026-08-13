@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cascading Encoding Explorer — mini-demo</title>
+    <meta
+      name="description"
+      content="Compresses a synthetic columnar table with cascading encodings (dictionary, RLE, delta, frame-of-reference, ALP, FSST, bit-packing) and compares size and point-lookup cost against a page-compressed Parquet-style baseline."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="stylesheet" href="../../assets/base.css" />
+    <link rel="stylesheet" href="../../assets/demo-shell.css" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#stage">Skip to the demo</a>
+
+    <header class="demo-header">
+      <div class="wrap">
+        <a class="demo-back" href="../../">All demos</a>
+        <h1 class="demo-title">Cascading Encoding Explorer</h1>
+        <p class="demo-sub">
+          Pick a column from a synthetic telemetry table, watch a sampling
+          compressor choose a tree of encodings for it, and compare both the
+          stored size and the cost of a single-row lookup against a
+          page-compressed, Parquet-style baseline.
+        </p>
+        <p class="demo-meta">
+          <span class="tag">columnar formats</span>
+          <span class="tag">compression</span>
+          <span class="tag">synthetic data</span>
+        </p>
+        <p class="provenance">
+          An independent mini-demo built by Aarush Kandukoori, inspired by
+          Spiral (Vortex)'s public product description. Not affiliated with
+          Spiral (Vortex).
+        </p>
+      </div>
+    </header>
+
+    <main class="demo-main">
+      <div class="wrap">
+        <section id="stage" class="demo-stage" tabindex="-1">
+          <div class="panel">
+            <div class="row row-between panel-head">
+              <h2>1 &middot; Column</h2>
+              <span class="status" id="status" data-state="running"
+                >ready</span
+              >
+            </div>
+
+            <div class="field field-inline">
+              <label for="col">Column to compress</label>
+              <select id="col"></select>
+            </div>
+            <p class="hint" id="col-desc">&nbsp;</p>
+
+            <div class="metrics" id="metrics">
+              <div class="metric">
+                <span class="metric-label">Uncompressed (Arrow)</span>
+                <span class="metric-value" id="m-raw">—</span>
+                <span class="metric-sub" id="s-raw">&nbsp;</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Cascaded encodings</span>
+                <span class="metric-value" id="m-casc">—</span>
+                <span class="metric-sub" id="s-casc">&nbsp;</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Page-compressed baseline</span>
+                <span class="metric-value" id="m-base">—</span>
+                <span class="metric-sub" id="s-base">&nbsp;</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Compress time</span>
+                <span class="metric-value" id="m-time">—</span>
+                <span class="metric-sub">sampled + exhaustive + baseline</span>
+              </div>
+            </div>
+
+            <div class="cmp" id="cmp" role="img" aria-labelledby="cmp-alt">
+              <div class="cmp-row">
+                <span class="cmp-label">Arrow</span>
+                <span class="bar bar-muted"><span id="bar-raw"></span></span>
+                <span class="cmp-val tnum" id="v-raw">—</span>
+              </div>
+              <div class="cmp-row">
+                <span class="cmp-label">Baseline</span>
+                <span class="bar bar-muted"><span id="bar-base"></span></span>
+                <span class="cmp-val tnum" id="v-base">—</span>
+              </div>
+              <div class="cmp-row">
+                <span class="cmp-label">Cascaded</span>
+                <span class="bar"><span id="bar-casc"></span></span>
+                <span class="cmp-val tnum" id="v-casc">—</span>
+              </div>
+            </div>
+            <p class="hint" id="cmp-alt">
+              Three bars scaled against the uncompressed Arrow size.
+            </p>
+
+            <p class="note" id="size-verdict" aria-live="polite"></p>
+
+            <p class="note" id="sample-note" aria-live="polite">
+              Comparing the sampled choice against an exhaustive search&hellip;
+            </p>
+          </div>
+
+          <div class="panel">
+            <div class="row row-between panel-head">
+              <h2>2 &middot; Chosen encoding tree</h2>
+              <span class="tag" id="tree-depth">depth 3</span>
+            </div>
+            <p class="hint">
+              Each node stores its own buffers and hands its remaining arrays to
+              the next encoding down. Bytes shown include every descendant.
+            </p>
+            <div class="scroll-x">
+              <div id="tree" class="tree-root" aria-label="Encoding tree"></div>
+            </div>
+            <p class="eyebrow tree-text-label">Layout</p>
+            <div class="scroll-x">
+              <code class="tree-text" id="tree-text">—</code>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="row row-between panel-head">
+              <h2>3 &middot; Point lookup</h2>
+              <button class="btn" type="button" id="row-random">
+                Random row
+              </button>
+            </div>
+            <p class="hint">
+              Decode one row without decoding the column. Bit-packed and
+              dictionary buffers are addressable, so only the bytes covering
+              that row are read; the baseline has to pull and inflate the whole
+              compressed page.
+            </p>
+
+            <div class="field">
+              <label class="control-readout" for="row-range">
+                <span>Row index</span>
+                <output id="row-out" for="row-range">0</output>
+              </label>
+              <input id="row-range" type="range" min="0" max="1999" value="0" />
+            </div>
+            <div class="field field-inline">
+              <label for="row-num">Exact row</label>
+              <input id="row-num" type="number" min="0" max="1999" value="0" />
+            </div>
+
+            <div class="lookup-value">
+              <span class="eyebrow">Decoded value</span>
+              <code id="lookup-value">—</code>
+            </div>
+
+            <div class="cmp" id="touch" role="img" aria-labelledby="touch-alt">
+              <div class="cmp-row">
+                <span class="cmp-label">Baseline</span>
+                <span class="bar bar-muted"><span id="bar-tbase"></span></span>
+                <span class="cmp-val tnum" id="v-tbase">—</span>
+              </div>
+              <div class="cmp-row">
+                <span class="cmp-label">Cascaded</span>
+                <span class="bar"><span id="bar-tcasc"></span></span>
+                <span class="cmp-val tnum" id="v-tcasc">—</span>
+              </div>
+            </div>
+            <p class="hint" id="touch-alt">
+              Bytes read to answer the lookup, scaled against the larger of the
+              two.
+            </p>
+
+            <p class="note" id="touch-verdict" aria-live="polite"></p>
+
+            <p class="eyebrow">Bytes read, per buffer</p>
+            <ul class="parts" id="parts"></ul>
+            <p class="hint" id="touch-note"></p>
+          </div>
+
+          <div class="panel">
+            <div class="row row-between panel-head">
+              <h2>4 &middot; Round-trip check</h2>
+              <span class="status" id="verify" data-state="running"
+                >not run</span
+              >
+            </div>
+            <p class="hint">
+              Every value is decoded back out of the encoding tree and compared
+              with the value that went in, and every baseline page is
+              decompressed and compared byte for byte. Nothing here is asserted;
+              it is checked on each run.
+            </p>
+            <div class="table-scroll">
+              <table class="data">
+                <caption class="sr-only">
+                  First eight rows: stored value, value decoded from the
+                  encoding tree, and whether they match.
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Row</th>
+                    <th scope="col">Input</th>
+                    <th scope="col">Decoded</th>
+                    <th scope="col">Match</th>
+                  </tr>
+                </thead>
+                <tbody id="preview"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="row row-between panel-head">
+              <h2>5 &middot; Whole-table sweep</h2>
+              <button class="btn" type="button" id="sweep">
+                Compress all columns
+              </button>
+            </div>
+            <p class="hint">
+              Runs the same compressor over every column with the current
+              settings. This is the only expensive button on the page; it is not
+              run on load.
+            </p>
+            <div class="table-scroll" id="sweep-wrap" hidden>
+              <table class="data">
+                <caption class="sr-only">
+                  Per-column compressed sizes and chosen layouts.
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Column</th>
+                    <th scope="col">Arrow</th>
+                    <th scope="col">Baseline</th>
+                    <th scope="col">Cascaded</th>
+                    <th scope="col">vs Arrow</th>
+                    <th scope="col">Layout</th>
+                  </tr>
+                </thead>
+                <tbody id="sweep-body"></tbody>
+                <tfoot id="sweep-foot"></tfoot>
+              </table>
+            </div>
+            <p class="hint" id="sweep-note"></p>
+          </div>
+        </section>
+
+        <aside class="demo-controls" aria-label="Controls">
+          <div class="control-group">
+            <p class="eyebrow">Table</p>
+            <div class="field">
+              <label class="control-readout" for="rows">
+                <span>Rows</span>
+                <output id="rows-out" for="rows">2,000</output>
+              </label>
+              <input
+                id="rows"
+                type="range"
+                min="250"
+                max="6000"
+                step="250"
+                value="2000"
+              />
+            </div>
+            <div class="control-actions">
+              <button class="btn" type="button" id="new-data">New data</button>
+              <button class="btn" type="button" id="reset">Reset</button>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <p class="eyebrow">Compressor</p>
+            <div class="field">
+              <label class="control-readout" for="depth">
+                <span>Cascade depth</span>
+                <output id="depth-out" for="depth">3</output>
+              </label>
+              <input id="depth" type="range" min="1" max="4" step="1" value="3" />
+              <p class="hint">
+                How many times an encoding may hand its own buffers to another
+                encoding.
+              </p>
+            </div>
+            <div class="field">
+              <label class="control-readout" for="sample">
+                <span>Sample rows</span>
+                <output id="sample-out" for="sample">256</output>
+              </label>
+              <input
+                id="sample"
+                type="range"
+                min="32"
+                max="2048"
+                step="32"
+                value="256"
+              />
+              <p class="hint">
+                The compressor decides from eight evenly spaced chunks totalling
+                this many rows, then applies the winner to the whole column.
+              </p>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <p class="eyebrow">Candidate encodings</p>
+            <label class="check"
+              ><input type="checkbox" id="c-dict" checked /><span
+                >Dictionary</span
+              ></label
+            >
+            <label class="check"
+              ><input type="checkbox" id="c-rle" checked /><span
+                >Run-length</span
+              ></label
+            >
+            <label class="check"
+              ><input type="checkbox" id="c-delta" checked /><span
+                >Delta (blocks of 128)</span
+              ></label
+            >
+            <label class="check"
+              ><input type="checkbox" id="c-for" checked /><span
+                >Frame of reference</span
+              ></label
+            >
+            <label class="check"
+              ><input type="checkbox" id="c-blocked" checked /><span
+                >Blocked bit-packing</span
+              ></label
+            >
+            <label class="check"
+              ><input type="checkbox" id="c-alp" checked /><span
+                >ALP (decimal floats)</span
+              ></label
+            >
+            <label class="check"
+              ><input type="checkbox" id="c-fsst" checked /><span
+                >FSST (strings)</span
+              ></label
+            >
+            <p class="hint">
+              Flat bit-packing, constant and validity encodings are always
+              available, so the tree always has a leaf to fall back to.
+            </p>
+          </div>
+
+          <div class="control-group">
+            <p class="eyebrow">Baseline</p>
+            <div class="field">
+              <label for="page">Page size (rows)</label>
+              <select id="page">
+                <option value="1024">1,024</option>
+                <option value="4096" selected>4,096</option>
+                <option value="8192">8,192</option>
+              </select>
+              <p class="hint">
+                The baseline writes plain or dictionary pages and compresses
+                each page as one LZ77 block, so a lookup must inflate a whole
+                page.
+              </p>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <footer class="demo-footer">
+      <div class="wrap">
+        <span
+          >All data on this page is synthetic and generated in-browser. Sizes
+          are measured from buffers this page really builds.</span
+        >
+        <a href="../../">Back to all demos</a>
+      </div>
+    </footer>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,132 @@
+/* Demo-specific styling only. Everything else comes from base.css /
+   demo-shell.css, including both colour themes. */
+
+.stage-head {
+  margin-bottom: var(--s-3);
+}
+
+.stage-head h2 {
+  font-size: var(--fs-lg);
+  margin: 0;
+}
+
+.chart-wrap {
+  height: 360px;
+  margin-bottom: var(--s-3);
+}
+
+#chart {
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: pan-y;
+}
+
+@media (max-width: 40rem) {
+  .chart-wrap {
+    height: 300px;
+  }
+}
+
+/* Legend swatches: shape and text carry the meaning, not colour alone. */
+.legend-swatch {
+  height: 0.7rem;
+  width: 1.1rem;
+  border-radius: 2px;
+  background: none;
+  border-bottom: 2px solid var(--text-muted);
+  align-self: center;
+}
+
+.sw-est {
+  border-bottom-style: dashed;
+  border-bottom-color: var(--accent);
+}
+
+.sw-raw {
+  border-bottom-width: 1px;
+  border-bottom-color: var(--text-faint);
+}
+
+.sw-band {
+  border-bottom: 0;
+  height: 0.8rem;
+  background: var(--accent-soft);
+  border: 1px solid var(--border);
+}
+
+.sw-tick {
+  border-bottom: 0;
+  width: 0.9rem;
+  height: 0.8rem;
+  border-left: 2px solid var(--accent);
+  border-right: 2px solid var(--accent);
+}
+
+.summary {
+  font-size: var(--fs-sm);
+  line-height: var(--lh-snug);
+  color: var(--text-muted);
+  margin-top: var(--s-3);
+  max-width: var(--measure);
+}
+
+/* Sidebar segmented controls need to wrap in a 20rem column. */
+.segmented-block {
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.segmented-block .btn {
+  flex: 1 1 auto;
+}
+
+.phase-ok {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.phase-warn {
+  color: var(--warn);
+  font-weight: 620;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Comparison table: the highlighted row is marked with a word as well as a
+   background, so the highlight survives greyscale and colour blindness. */
+table.data tbody tr[data-selected="true"] td {
+  background: var(--accent-soft);
+}
+
+table.data tbody tr[data-selected="true"] td:first-child {
+  font-weight: 620;
+}
+
+.sel-tag {
+  margin-left: var(--s-2);
+}
+
+.strategy-cell {
+  white-space: nowrap;
+}
+
+.metric-note {
+  margin-top: var(--s-3);
+}
+
+.how-list {
+  margin: 0;
+  padding-left: 1.15rem;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  line-height: var(--lh-snug);
+}
+
+.how-list li + li {
+  margin-top: var(--s-2);
+}
+
+.how-list strong {
+  color: var(--text);
+}

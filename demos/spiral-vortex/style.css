@@ -1,0 +1,248 @@
+/* Cascading Encoding Explorer — demo-specific styles only.
+   Everything colour-related comes from base.css tokens. */
+
+.panel-head {
+  margin-bottom: var(--s-3);
+  gap: var(--s-3);
+}
+
+.panel-head h2 {
+  font-size: var(--fs-lg);
+  margin: 0;
+}
+
+.panel > .hint {
+  margin-bottom: var(--s-4);
+  max-width: var(--measure);
+}
+
+.field-inline {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+
+.field-inline > label {
+  flex: none;
+}
+
+.field-inline > select,
+.field-inline > input {
+  flex: 1 1 12rem;
+  min-width: 0;
+  width: auto;
+}
+
+#col-desc {
+  margin: var(--s-2) 0 var(--s-4);
+}
+
+.metrics {
+  margin-bottom: var(--s-4);
+}
+
+.metric-sub {
+  display: block;
+  margin-top: var(--s-1);
+  font-size: var(--fs-xs);
+  line-height: 1.3;
+  color: var(--text-muted);
+}
+
+/* Checkbox rows are tap targets, so keep them a comfortable height. */
+.demo-controls .check {
+  min-height: 2.5rem;
+  align-items: center;
+}
+
+/* Comparison bars --------------------------------------------------------- */
+
+.cmp {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin-bottom: var(--s-2);
+}
+
+.cmp-row {
+  display: grid;
+  grid-template-columns: 5.4rem 1fr 5.5rem;
+  align-items: center;
+  gap: var(--s-3);
+  font-size: var(--fs-xs);
+}
+
+.cmp-label {
+  color: var(--text-muted);
+}
+
+.cmp-val {
+  text-align: right;
+  color: var(--text);
+}
+
+.cmp .bar {
+  height: 12px;
+}
+
+/* A neutral fill, so the accent always means "the cascaded encoding". */
+.bar-muted > span {
+  background: var(--border-strong);
+}
+
+/* Encoding tree ----------------------------------------------------------- */
+
+.tree-root {
+  min-width: 22rem;
+}
+
+.tnode {
+  padding: var(--s-2) 0;
+}
+
+.tnode-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-2) var(--s-3);
+  font-size: var(--fs-sm);
+}
+
+.tlabel {
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+}
+
+.tlabel::after {
+  content: " →";
+}
+
+.tkind {
+  font-weight: 620;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+}
+
+.tdetail {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+.tbytes {
+  margin-left: auto;
+  color: var(--text);
+  font-weight: 560;
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+
+.tmeter {
+  height: 5px;
+  margin-top: var(--s-1);
+}
+
+.tkids {
+  margin-left: var(--s-2);
+  padding-left: var(--s-4);
+  border-left: 2px solid var(--border);
+}
+
+.tree-text-label {
+  margin-top: var(--s-4);
+}
+
+.tree-text {
+  display: block;
+  white-space: pre;
+  padding: var(--s-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+}
+
+/* Point lookup ------------------------------------------------------------ */
+
+.lookup-value {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  margin: var(--s-4) 0;
+  padding: var(--s-3) var(--s-4);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+
+.lookup-value code {
+  font-size: var(--fs-sm);
+  word-break: break-all;
+}
+
+.parts {
+  list-style: none;
+  padding: 0;
+  margin: var(--s-2) 0 var(--s-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.parts li {
+  display: grid;
+  grid-template-columns: minmax(8rem, auto) 4.5rem 1fr;
+  gap: var(--s-2) var(--s-3);
+  align-items: baseline;
+  font-size: var(--fs-xs);
+  padding-block: var(--s-1);
+  border-bottom: 1px solid var(--border);
+}
+
+.parts li:last-child {
+  border-bottom: 0;
+}
+
+.part-kind {
+  font-family: var(--font-mono);
+  color: var(--text);
+}
+
+.part-bytes {
+  text-align: right;
+  color: var(--text);
+}
+
+.part-detail {
+  color: var(--text-muted);
+}
+
+@media (max-width: 30rem) {
+  .parts li {
+    grid-template-columns: 1fr 4.5rem;
+  }
+  .part-detail {
+    grid-column: 1 / -1;
+  }
+  .cmp-row {
+    grid-template-columns: 4.4rem 1fr 4.6rem;
+  }
+}
+
+/* Tables ------------------------------------------------------------------ */
+
+table.data td.mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+
+#sweep-foot td {
+  border-top: 1px solid var(--border-strong);
+  font-weight: 620;
+}
+
+.demo-footer span {
+  max-width: 46ch;
+}

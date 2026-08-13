@@ -1,0 +1,314 @@
+/* Agent Trace Query Console — demo-specific styles only.
+   Everything else comes from ../../assets/base.css and demo-shell.css.
+   No new colours: only base.css tokens are used. */
+
+.panel-head {
+  gap: var(--s-3);
+  align-items: flex-end;
+}
+
+.panel-head h2,
+.panel-head h3 {
+  margin: 0;
+}
+
+/* An inline label + select pair that sits in a panel header. */
+.field-inline {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+/* The select may shrink with its panel: min-width 0 keeps a narrow screen
+   from pushing the page into horizontal scroll. */
+.field-inline select {
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+  flex: 1 1 9rem;
+}
+
+@media (min-width: 34rem) {
+  .field-inline select {
+    min-width: 11rem;
+  }
+}
+
+.metric-wide {
+  grid-column: span 2;
+}
+
+@media (max-width: 30rem) {
+  .metric-wide {
+    grid-column: auto;
+  }
+}
+
+.eval-intro {
+  font-size: var(--fs-sm);
+}
+
+/* Histogram --------------------------------------------------------------- */
+
+.chart-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.chart-scroll svg {
+  min-width: 520px;
+  width: 100%;
+}
+
+.hist-bar {
+  fill: var(--accent);
+}
+
+.hist-axis {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+
+.hist-label,
+.hist-count {
+  fill: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 15px;
+}
+
+.hist-count {
+  fill: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-empty {
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-md);
+  padding: var(--s-5);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+/* Evaluator list ---------------------------------------------------------- */
+
+.eval-list {
+  display: grid;
+  gap: var(--s-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.eval-item {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-4);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+
+.eval-item[data-off="true"] {
+  opacity: 0.55;
+}
+
+.eval-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-3);
+}
+
+.eval-name {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: 620;
+}
+
+.eval-score {
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.eval-desc {
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+  max-width: var(--measure);
+}
+
+/* Verdict wording, never colour alone. */
+.verdict-pass::before {
+  content: "\2713\00a0"; /* ✓ */
+}
+
+.verdict-fail {
+  color: var(--danger);
+}
+
+.verdict-fail::before {
+  content: "\2717\00a0"; /* ✗ */
+}
+
+/* Runs table -------------------------------------------------------------- */
+
+table.data td .btn {
+  white-space: nowrap;
+}
+
+/* Keep every touch target in the sidebar comfortably tappable. */
+.demo-controls .check {
+  min-height: 2.5rem;
+}
+
+.demo-controls input[type="range"] {
+  height: 2.5rem;
+}
+
+tr[data-selected="true"] td {
+  background: var(--accent-soft);
+}
+
+.run-id {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+
+/* Waterfall --------------------------------------------------------------- */
+
+.waterfall {
+  margin-top: var(--s-2);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: var(--s-3);
+}
+
+.wf-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.wf-row {
+  display: grid;
+  grid-template-columns: minmax(0, 15rem) minmax(0, 1fr) 5.5rem;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-1) 0;
+}
+
+.wf-label {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  min-width: 0;
+  font-size: var(--fs-xs);
+}
+
+.wf-kind {
+  flex: none;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  width: 4.6rem;
+}
+
+.wf-name {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wf-track {
+  position: relative;
+  height: 14px;
+  border-radius: var(--r-pill);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  min-width: 0;
+}
+
+.wf-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+}
+
+.wf-row[data-status="failed"] .wf-bar {
+  background: var(--danger);
+}
+
+.wf-row[data-status="root"] .wf-bar {
+  background: var(--border-strong);
+}
+
+.wf-dur {
+  text-align: right;
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.wf-depth-1 {
+  padding-left: var(--s-4);
+}
+
+.wf-depth-2 {
+  padding-left: var(--s-6);
+}
+
+.wf-flag {
+  font-size: var(--fs-xs);
+  color: var(--danger);
+  white-space: nowrap;
+}
+
+/* The evaluator verdict can list several failing checks. As a .tag it would
+   stay on one line and hold the whole panel open, so let it wrap. */
+.panel-head {
+  flex-wrap: wrap;
+}
+
+#wf-verdict {
+  white-space: normal;
+  min-width: 0;
+}
+
+@media (max-width: 46rem) {
+  .wf-row {
+    grid-template-columns: minmax(0, 1fr) 5rem;
+    row-gap: var(--s-1);
+  }
+  .wf-label {
+    grid-column: 1 / -1;
+    /* Flex children default to min-width:auto and refuse to shrink below
+       their content, which pushed the page wider than a 360 px screen. */
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+  .wf-name {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .wf-flag {
+    min-width: 0;
+    flex: 1 1 100%;
+    white-space: normal;
+  }
+  .wf-kind {
+    width: auto;
+    min-width: 3.4rem;
+  }
+}

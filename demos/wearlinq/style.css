@@ -1,0 +1,185 @@
+/* Streaming 6-Lead QRS Detector — demo-specific styles only.
+   Everything colourful comes from base.css tokens; no new palette. */
+
+.panel-head {
+  gap: var(--s-3);
+  margin-bottom: var(--s-2);
+}
+
+.panel-title {
+  font-size: var(--fs-lg);
+  margin: 0;
+}
+
+.sub-title {
+  font-size: var(--fs-base);
+  margin-top: var(--s-5);
+  margin-bottom: var(--s-2);
+}
+
+.panel > .hint {
+  max-width: var(--measure);
+  margin-bottom: var(--s-3);
+}
+
+.canvas-wrap {
+  width: 100%;
+  min-width: 0;
+}
+
+.canvas-wrap canvas {
+  display: block;
+  width: 100%;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+
+.mono-note {
+  margin-top: var(--s-2);
+}
+
+.mono-note output {
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+
+/* Key/value detail rows ---------------------------------------------------- */
+
+.kv {
+  margin: var(--s-4) 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.kv-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-4);
+  padding: var(--s-2) 0;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-sm);
+}
+
+.kv-row:last-child {
+  border-bottom: 0;
+}
+
+.kv dt {
+  color: var(--text-muted);
+}
+
+.kv dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 560;
+}
+
+.metric-value-sm {
+  font-size: var(--fs-base);
+  line-height: 1.25;
+}
+
+.metrics {
+  margin-bottom: var(--s-2);
+}
+
+/* Latency budget ----------------------------------------------------------- */
+
+.budget {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  margin-top: var(--s-4);
+}
+
+.budget-label {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-4);
+  font-size: var(--fs-sm);
+  margin-bottom: var(--s-2);
+}
+
+.budget-val {
+  font-weight: 620;
+}
+
+.budget-note {
+  font-size: var(--fs-xs);
+  color: var(--text-faint);
+  margin-top: var(--s-1);
+}
+
+.bar.over > span {
+  background: var(--danger);
+}
+
+.budget-total {
+  margin-top: var(--s-5);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-snug);
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  border-radius: var(--r-md);
+  padding: var(--s-3) var(--s-4);
+  max-width: var(--measure);
+}
+
+.budget-total[data-state="ok"] {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 22%, transparent);
+  border-left-color: var(--accent);
+  color: var(--text);
+}
+
+.budget-total[data-state="over"] {
+  background: var(--danger-soft);
+  border-color: color-mix(in srgb, var(--danger) 25%, transparent);
+  border-left-color: var(--danger);
+  color: var(--text);
+}
+
+/* Log ---------------------------------------------------------------------- */
+
+.log .log-row + .log-row {
+  margin-top: 2px;
+}
+
+.log-row[data-sev="warn"] span:last-child {
+  color: var(--warn);
+}
+
+.log-row[data-sev="alarm"] span:last-child {
+  color: var(--danger);
+  font-weight: 620;
+}
+
+.log-row[data-sev="ok"] span:last-child {
+  color: var(--accent);
+}
+
+/* Controls ----------------------------------------------------------------- */
+
+.control-group .check {
+  min-height: 2.5rem;
+}
+
+.demo-controls .control-actions .btn {
+  flex: 1 1 8rem;
+}
+
+table.data caption {
+  caption-side: top;
+}
+
+table.data th[scope="row"] {
+  font-weight: 560;
+  color: var(--text-muted);
+  white-space: nowrap;
+}

@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Streaming 6-Lead QRS Detector — mini-demo</title>
+    <meta
+      name="description"
+      content="A synthetic 6-lead ECG stream running through a live Pan-Tompkins QRS detector, scored beat-by-beat against ground truth."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="stylesheet" href="../../assets/base.css" />
+    <link rel="stylesheet" href="../../assets/demo-shell.css" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#stage">Skip to the demo</a>
+
+    <header class="demo-header">
+      <div class="wrap">
+        <a class="demo-back" href="../../">All demos</a>
+        <h1 class="demo-title">Streaming 6-Lead QRS Detector</h1>
+        <p class="demo-sub">
+          A simulated two-channel chest patch streams at 250&nbsp;Hz. Four more
+          limb leads are derived from it, a streaming Pan–Tompkins detector
+          picks QRS complexes out of the noise, and every beat is scored
+          against the ground truth the simulator knows it wrote.
+        </p>
+        <p class="demo-meta">
+          <span class="tag">ecg</span>
+          <span class="tag">signal processing</span>
+          <span class="tag">synthetic data</span>
+        </p>
+        <p class="provenance">
+          An independent mini-demo built by Aarush Kandukoori, inspired by
+          Wearlinq's public product description. Not affiliated with Wearlinq.
+        </p>
+      </div>
+    </header>
+
+    <main class="demo-main">
+      <div class="wrap">
+        <section id="stage" class="demo-stage" tabindex="-1">
+          <div class="panel">
+            <div class="row row-between panel-head">
+              <h2 class="panel-title">Six-lead strip</h2>
+              <span class="status" id="run-status" data-state="idle"
+                >Idle</span
+              >
+            </div>
+            <p class="hint">
+              Channels <strong>I</strong> and <strong>II</strong> are measured.
+              <strong>III</strong>, <strong>aVR</strong>,
+              <strong>aVL</strong> and <strong>aVF</strong> are computed from
+              them (III&nbsp;=&nbsp;II−I, aVR&nbsp;=&nbsp;−(I+II)/2,
+              aVL&nbsp;=&nbsp;I−II/2, aVF&nbsp;=&nbsp;II−I/2) — the same trick a
+              two-electrode patch uses to report six leads.
+            </p>
+            <div class="canvas-wrap">
+              <canvas
+                id="strip"
+                role="img"
+                aria-label="Scrolling six-lead ECG strip. A text summary of the current rhythm and rate is in the live scoring panel below."
+              ></canvas>
+            </div>
+            <p class="hint mono-note">
+              Grid: 200&nbsp;ms &times; 0.5&nbsp;mV; the bar at the left of each
+              lane is 1&nbsp;mV. The lane drawn in the accent colour is the one
+              the detector is reading. Derived-lead check — residual of
+              I&nbsp;+&nbsp;III&nbsp;&minus;&nbsp;II on the clean dipole, which
+              the projection model makes exactly zero:
+              <output id="einthoven" for="strip">—</output>
+            </p>
+          </div>
+
+          <div class="panel">
+            <div class="row row-between panel-head">
+              <h2 class="panel-title">
+                Pan–Tompkins pipeline &middot; lead
+                <span id="lead-name" class="mono">II</span>
+              </h2>
+            </div>
+            <p class="hint">
+              Top lane: the 5–15&nbsp;Hz band-passed signal the detector
+              actually sees. Bottom lane: differentiate → square → moving-window
+              integrate, with the adaptive threshold drawn over it. Marks:
+              <span class="mono">&#9650;</span> true positive,
+              <span class="mono">&#10005;</span> false positive,
+              <span class="mono">&#9675;</span> missed beat,
+              <span class="mono">|</span> ground-truth R peak.
+            </p>
+            <div class="canvas-wrap">
+              <canvas
+                id="pipeline"
+                role="img"
+                aria-label="Band-passed ECG and the moving-window-integrated energy signal with the detector's adaptive threshold and its beat marks. Counts are given as text in the scoring panel below."
+              ></canvas>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h2 class="panel-title">Live scoring against ground truth</h2>
+            <p class="hint">
+              The simulator wrote every R peak, so the detector can be scored
+              exactly. A detection counts as a hit when its estimated R
+              location lands within &plusmn;150&nbsp;ms of a true beat — the
+              tolerance the standard beat-by-beat benchmarks use. The first
+              2.5&nbsp;s are excluded as detector warm-up.
+            </p>
+            <div class="metrics" id="metrics" aria-label="Live detector metrics">
+              <div class="metric">
+                <span class="metric-label">Heart rate</span>
+                <span class="metric-value" id="m-hr">—</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Rhythm call</span>
+                <span class="metric-value metric-value-sm" id="m-rhythm"
+                  >—</span
+                >
+              </div>
+              <div class="metric">
+                <span class="metric-label">Sensitivity</span>
+                <span class="metric-value" id="m-se">—</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">PPV</span>
+                <span class="metric-value" id="m-ppv">—</span>
+              </div>
+            </div>
+            <dl class="kv" id="detail">
+              <div class="kv-row">
+                <dt>True / false / missed beats</dt>
+                <dd id="k-counts">0 / 0 / 0</dd>
+              </div>
+              <div class="kv-row">
+                <dt>R-peak localisation error (mean abs.)</dt>
+                <dd id="k-locerr">—</dd>
+              </div>
+              <div class="kv-row">
+                <dt>Detection lag after the R peak (mean)</dt>
+                <dd id="k-lag">—</dd>
+              </div>
+              <div class="kv-row">
+                <dt>Beat-type accuracy</dt>
+                <dd id="k-acc">—</dd>
+              </div>
+              <div class="kv-row">
+                <dt>RR irregularity (RMSSD / mean RR)</dt>
+                <dd id="k-irreg">—</dd>
+              </div>
+              <div class="kv-row">
+                <dt>P-wave energy / R height, last 8 beats</dt>
+                <dd id="k-pwave">—</dd>
+              </div>
+            </dl>
+            <p class="hint">
+              The AF call fires when irregularity passes 10%, measured only
+              across intervals between two beats the classifier believes are
+              normal — otherwise ectopy masquerades as irregularity. P-wave
+              energy is shown but deliberately <em>not</em> used: switch
+              between normal sinus and atrial fibrillation and watch it barely
+              move, which is why a patch-sized AF check is built on intervals
+              rather than on P waves.
+            </p>
+            <h3 class="sub-title">Beat classifier confusion</h3>
+            <div class="table-scroll">
+              <table class="data" id="confusion">
+                <caption class="sr-only">
+                  Rows are the true beat type written by the simulator, columns
+                  are the type the on-device classifier assigned.
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">true &darr; / called &rarr;</th>
+                    <th scope="col" class="num">Normal</th>
+                    <th scope="col" class="num">PVC</th>
+                    <th scope="col" class="num">Atrial premature</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th scope="row">Normal</th>
+                    <td class="num" id="c-NN">0</td>
+                    <td class="num" id="c-NV">0</td>
+                    <td class="num" id="c-NA">0</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">PVC</th>
+                    <td class="num" id="c-VN">0</td>
+                    <td class="num" id="c-VV">0</td>
+                    <td class="num" id="c-VA">0</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Atrial premature</th>
+                    <td class="num" id="c-AN">0</td>
+                    <td class="num" id="c-AV">0</td>
+                    <td class="num" id="c-AA">0</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="note">
+              The beat classifier here is a 5-feature softmax with hand-set
+              weights (QRS width, prematurity, P-wave energy, R amplitude), not
+              a trained network. It is in the demo to show where the
+              classification stage sits in the stream and how noise degrades it
+              — not to claim an accuracy number.
+            </p>
+          </div>
+
+          <div class="panel">
+            <h2 class="panel-title">Sensor-to-alert budget</h2>
+            <p class="hint">
+              Only the first row is measured by the running simulation: it is
+              the mean delay between a true R peak and the sample at which the
+              detector fired. The other two are modelled from the sliders.
+            </p>
+            <div class="budget" id="budget">
+              <div class="budget-row">
+                <div class="budget-label">
+                  <span>Detection (filters + integration + decision)</span>
+                  <span class="budget-val tnum" id="b-det">—</span>
+                </div>
+                <div class="bar"><span id="b-det-bar"></span></div>
+                <p class="budget-note">measured in-browser</p>
+              </div>
+              <div class="budget-row">
+                <div class="budget-label">
+                  <span>Beat classifier inference</span>
+                  <span class="budget-val tnum" id="b-inf">—</span>
+                </div>
+                <div class="bar"><span id="b-inf-bar"></span></div>
+                <p class="budget-note">modelled — slider</p>
+              </div>
+              <div class="budget-row">
+                <div class="budget-label">
+                  <span>Radio uplink + server hop</span>
+                  <span class="budget-val tnum" id="b-up">—</span>
+                </div>
+                <div class="bar"><span id="b-up-bar"></span></div>
+                <p class="budget-note">modelled — slider</p>
+              </div>
+            </div>
+            <p class="budget-total" id="b-total">
+              Start the stream to measure the detection stage.
+            </p>
+          </div>
+
+          <div class="panel">
+            <div class="row row-between panel-head">
+              <h2 class="panel-title">Rhythm alerts</h2>
+              <button class="btn btn-sm" type="button" id="clear-log">
+                Clear log
+              </button>
+            </div>
+            <p class="hint">
+              A call is committed once two consecutive beats agree, except a
+              pause, which fires on the beat that ends it. Times are simulation
+              clock.
+            </p>
+            <div class="log" id="log" role="log" aria-live="polite">
+              <div class="log-row">
+                <span class="log-time">--:--</span
+                ><span>waiting for the stream to start</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="demo-controls" aria-label="Controls">
+          <div class="control-group">
+            <p class="eyebrow">Transport</p>
+            <div class="control-actions">
+              <button class="btn btn-primary" type="button" id="run">
+                Run
+              </button>
+              <button class="btn" type="button" id="step">Step 2 s</button>
+              <button class="btn" type="button" id="reset">Reset</button>
+            </div>
+            <div class="field">
+              <label class="label" for="speed">Playback speed</label>
+              <select id="speed">
+                <option value="0.5">0.5&times; — slow</option>
+                <option value="1" selected>1&times; — real time</option>
+                <option value="2">2&times;</option>
+                <option value="4">4&times;</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <p class="eyebrow">Patient &amp; signal</p>
+            <div class="field">
+              <label class="label" for="scenario">Underlying rhythm</label>
+              <select id="scenario">
+                <option value="sinus" selected>Normal sinus</option>
+                <option value="pvc">Ventricular ectopy (trigeminy)</option>
+                <option value="apb">Frequent atrial premature beats</option>
+                <option value="afib">Atrial fibrillation</option>
+                <option value="pause">Sinus pauses</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="control-readout" for="hr">
+                <span>Base rate</span>
+                <output id="hr-out" for="hr">72 bpm</output>
+              </label>
+              <input id="hr" type="range" min="35" max="170" step="1" value="72" />
+            </div>
+            <div class="field">
+              <label class="control-readout" for="motion">
+                <span>Motion artifact</span>
+                <output id="motion-out" for="motion">12%</output>
+              </label>
+              <input
+                id="motion"
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value="12"
+              />
+            </div>
+            <div class="field">
+              <label class="control-readout" for="wander">
+                <span>Baseline wander</span>
+                <output id="wander-out" for="wander">0.15 mV</output>
+              </label>
+              <input
+                id="wander"
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value="25"
+              />
+            </div>
+            <label class="check" for="mains">
+              <input id="mains" type="checkbox" />
+              <span>60 Hz mains hum</span>
+            </label>
+            <div class="control-actions">
+              <button class="btn btn-sm" type="button" id="inj-pvc">
+                Inject PVC
+              </button>
+              <button class="btn btn-sm" type="button" id="inj-pause">
+                Inject 3 s pause
+              </button>
+              <button class="btn btn-sm" type="button" id="inj-motion">
+                Motion burst
+              </button>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <p class="eyebrow">Detector</p>
+            <p class="hint">
+              Changing anything here clears the running scores, so the numbers
+              always describe the current settings.
+            </p>
+            <div class="field">
+              <label class="label" for="lead">Analysis lead</label>
+              <select id="lead">
+                <option value="0">I</option>
+                <option value="1" selected>II</option>
+                <option value="2">III</option>
+                <option value="3">aVR</option>
+                <option value="4">aVL</option>
+                <option value="5">aVF</option>
+              </select>
+              <p class="hint">
+                The simulated QRS axis is about 58&deg;, so aVL sits nearly
+                perpendicular to it and is close to isoelectric. Pick aVL and
+                watch sensitivity fall — a lead with no R wave has nothing to
+                detect.
+              </p>
+            </div>
+            <div class="field">
+              <label class="control-readout" for="win">
+                <span>Integration window</span>
+                <output id="win-out" for="win">150 ms</output>
+              </label>
+              <input id="win" type="range" min="60" max="240" step="4" value="150" />
+            </div>
+            <div class="field">
+              <label class="control-readout" for="refrac">
+                <span>Refractory blanking</span>
+                <output id="refrac-out" for="refrac">200 ms</output>
+              </label>
+              <input
+                id="refrac"
+                type="range"
+                min="140"
+                max="400"
+                step="4"
+                value="200"
+              />
+              <p class="hint">
+                Nothing arrives inside 400&nbsp;ms at rest, so this looks inert
+                — until you push the rate past 150&nbsp;bpm, where a long
+                blanking window starts swallowing real beats.
+              </p>
+            </div>
+            <div class="field">
+              <label class="control-readout" for="thrk">
+                <span>Threshold coefficient</span>
+                <output id="thrk-out" for="thrk">0.25</output>
+              </label>
+              <input
+                id="thrk"
+                type="range"
+                min="5"
+                max="70"
+                step="1"
+                value="25"
+              />
+              <p class="hint">
+                The whole precision/recall dial. Raise it with motion artifact
+                turned up and false positives fall away; raise it with
+                search-back off and real beats start going missing.
+              </p>
+            </div>
+            <label class="check" for="searchback">
+              <input id="searchback" type="checkbox" checked />
+              <span>Search-back for missed beats</span>
+            </label>
+            <p class="hint">
+              Re-scans at half the threshold once 1.66 average RR passes with
+              no beat. Set the threshold coefficient to 0.70 and toggle this:
+              sensitivity swings by roughly 18 points.
+            </p>
+            <label class="check" for="twave">
+              <input id="twave" type="checkbox" checked />
+              <span>T-wave discrimination</span>
+            </label>
+            <p class="hint">
+              Rejects a peak within 360&nbsp;ms of the last QRS whose steepest
+              slope is under half of that QRS's. Silent in lead II, where the T
+              wave is nowhere near the R in slope. Switch to aVL, where it is,
+              and it starts removing false positives.
+            </p>
+          </div>
+
+          <div class="control-group">
+            <p class="eyebrow">Alert budget</p>
+            <div class="field">
+              <label class="control-readout" for="infer">
+                <span>Model inference</span>
+                <output id="infer-out" for="infer">0.06 ms</output>
+              </label>
+              <input
+                id="infer"
+                type="range"
+                min="1"
+                max="160"
+                step="1"
+                value="1"
+              />
+            </div>
+            <div class="field">
+              <label class="control-readout" for="uplink">
+                <span>Uplink + server</span>
+                <output id="uplink-out" for="uplink">90 ms</output>
+              </label>
+              <input
+                id="uplink"
+                type="range"
+                min="10"
+                max="400"
+                step="5"
+                value="90"
+              />
+            </div>
+            <p class="hint">Budget line is fixed at 250 ms end to end.</p>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <footer class="demo-footer">
+      <div class="wrap">
+        <span
+          >All waveforms, beats and annotations on this page are synthetic and
+          generated in-browser. Nothing here is a medical device or clinical
+          advice.</span
+        >
+        <a href="../../">Back to all demos</a>
+      </div>
+    </footer>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

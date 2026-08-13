@@ -1,0 +1,412 @@
+/* Closed-Loop Rescue-Dose Simulator — demo-specific styles only.
+   Everything colour-related resolves to a base.css token, so light and dark
+   both come free. No second accent colour is introduced. */
+
+.small {
+  font-size: var(--fs-sm);
+}
+
+.chart-h {
+  font-size: var(--fs-base);
+  font-weight: 620;
+  margin-top: var(--s-5);
+  margin-bottom: var(--s-2);
+}
+
+.chart-h.flush {
+  margin-top: 0;
+}
+
+.panel > .chart-h:first-child {
+  margin-top: 0;
+}
+
+/* Episode header row ------------------------------------------------------ */
+
+.ep-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.ep-select {
+  flex: 1 1 15rem;
+  min-width: 0;
+}
+
+.ep-transport {
+  display: flex;
+  gap: var(--s-2);
+}
+
+.ep-transport .btn {
+  min-width: 6rem;
+}
+
+.scrub-field {
+  margin-top: var(--s-4);
+}
+
+/* Decision line ----------------------------------------------------------- */
+
+.decision {
+  margin-top: var(--s-4);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-snug);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  border-radius: var(--r-md);
+  padding: var(--s-3) var(--s-4);
+  max-width: none;
+}
+
+.decision[data-outcome="TP"],
+.decision[data-outcome="TN"] {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 22%, transparent);
+  border-left-color: var(--accent);
+}
+
+.decision[data-outcome="FP"] {
+  background: var(--warn-soft);
+  border-color: color-mix(in srgb, var(--warn) 25%, transparent);
+  border-left-color: var(--warn);
+}
+
+.decision[data-outcome="FN"] {
+  background: var(--danger-soft);
+  border-color: color-mix(in srgb, var(--danger) 25%, transparent);
+  border-left-color: var(--danger);
+}
+
+/* Live readouts ----------------------------------------------------------- */
+
+.readouts {
+  display: grid;
+  gap: var(--s-2);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+  margin-top: var(--s-3);
+}
+
+.readout {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--s-2) var(--s-3);
+}
+
+.readout b {
+  display: block;
+  font-size: var(--fs-xs);
+  font-weight: 560;
+  color: var(--text-faint);
+  letter-spacing: 0.02em;
+}
+
+.readout span {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--fs-sm);
+  font-weight: 620;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+}
+
+/* Charts ------------------------------------------------------------------ */
+
+.chartbox {
+  width: 100%;
+  min-width: 0;
+}
+
+.chartbox svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.ribbonbox {
+  margin-top: var(--s-1);
+}
+
+.chart-empty {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-md);
+  padding: var(--s-4);
+  text-align: center;
+}
+
+.c-frame {
+  fill: var(--surface-2);
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.c-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.c-tick {
+  fill: var(--text-faint);
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+
+.c-truth {
+  fill: none;
+  stroke: var(--text-faint);
+  stroke-width: 1;
+  opacity: 0.55;
+}
+
+.c-live {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.c-thresh {
+  stroke: var(--danger);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+}
+
+.c-thresh-label {
+  fill: var(--danger);
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+
+.c-playhead {
+  stroke: var(--text);
+  stroke-width: 1.5;
+}
+
+.c-dose {
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 3 3;
+}
+
+.c-dose-label {
+  fill: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.c-mask {
+  stroke: none;
+}
+
+.c-mask-bg {
+  fill: var(--warn-soft);
+}
+
+.c-mask-line {
+  stroke: var(--warn);
+  stroke-width: 1;
+  opacity: 0.6;
+}
+
+/* State ribbon ------------------------------------------------------------ */
+
+.r-monitor {
+  fill: var(--surface-2);
+  stroke: var(--border);
+}
+
+.r-armed {
+  fill: color-mix(in srgb, var(--warn) 28%, var(--surface));
+  stroke: var(--border);
+}
+
+.r-confirm {
+  fill: color-mix(in srgb, var(--warn) 62%, var(--surface));
+  stroke: var(--border);
+}
+
+.r-dosed {
+  fill: color-mix(in srgb, var(--accent) 55%, var(--surface));
+  stroke: var(--border);
+}
+
+.r-label {
+  fill: var(--text);
+  font-size: 13px;
+  font-weight: 620;
+  font-family: var(--font-sans);
+}
+
+/* The SVGs scale with the viewport, so bump type on narrow screens to keep
+   tick labels legible once the 640-unit viewBox is squeezed onto a phone. */
+@media (max-width: 46rem) {
+  .c-tick,
+  .c-thresh-label,
+  .c-dose-label,
+  .s-now-label {
+    font-size: 20px;
+  }
+  .r-label {
+    font-size: 19px;
+  }
+}
+
+.legend-swatch.sw-monitor {
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+}
+.legend-swatch.sw-armed {
+  background: color-mix(in srgb, var(--warn) 28%, var(--surface));
+  border: 1px solid var(--border-strong);
+}
+.legend-swatch.sw-confirm {
+  background: color-mix(in srgb, var(--warn) 62%, var(--surface));
+  border: 1px solid var(--border-strong);
+}
+.legend-swatch.sw-dosed {
+  background: color-mix(in srgb, var(--accent) 55%, var(--surface));
+  border: 1px solid var(--border-strong);
+}
+.legend-swatch.sw-mask {
+  background: var(--warn-soft);
+  border: 1px dashed var(--warn);
+}
+.legend-swatch.sw-fp {
+  background: var(--accent);
+}
+.legend-swatch.sw-fn {
+  background: var(--text-faint);
+}
+.legend-swatch.sw-late {
+  background: var(--warn);
+}
+
+/* Sweep chart ------------------------------------------------------------- */
+
+.s-fp {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.s-fp-dot {
+  fill: var(--accent);
+}
+
+.s-fn {
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+}
+
+.s-fn-dot {
+  fill: var(--text-muted);
+}
+
+.s-late {
+  fill: none;
+  stroke: var(--warn);
+  stroke-width: 2;
+  stroke-dasharray: 1.5 3.5;
+  stroke-linecap: round;
+}
+
+.s-late-dot {
+  fill: var(--warn);
+}
+
+.s-now {
+  stroke: var(--text);
+  stroke-width: 1.5;
+  stroke-dasharray: 2 3;
+}
+
+.s-now-label {
+  fill: var(--text);
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+
+/* Log --------------------------------------------------------------------- */
+
+.log {
+  margin-top: var(--s-2);
+  max-height: 13rem;
+}
+
+.log-row {
+  display: flex;
+  gap: var(--s-3);
+  white-space: pre-wrap;
+}
+
+.log-time {
+  color: var(--text-faint);
+  flex: none;
+}
+
+.log-dose {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.log-warn {
+  color: var(--warn);
+}
+
+/* Table ------------------------------------------------------------------- */
+
+.table-scroll.tallish {
+  max-height: 24rem;
+  overflow-y: auto;
+  margin-top: var(--s-3);
+}
+
+table.data td .btn {
+  min-height: 2rem;
+}
+
+.o-tp,
+.o-tn {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 28%, transparent);
+  color: var(--accent);
+}
+
+.o-fp {
+  background: var(--warn-soft);
+  border-color: color-mix(in srgb, var(--warn) 30%, transparent);
+  color: var(--warn);
+}
+
+.o-fn {
+  background: var(--danger-soft);
+  border-color: color-mix(in srgb, var(--danger) 30%, transparent);
+  color: var(--danger);
+}
+
+/* Keep the row selected in the table visually obvious. */
+table.data tr[data-current="1"] td {
+  background: var(--accent-soft);
+}
+
+@media (max-width: 30rem) {
+  .ep-transport .btn {
+    min-width: 5rem;
+    flex: 1 1 auto;
+  }
+  .ep-transport {
+    width: 100%;
+  }
+}

@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Agent Trace Query Console — mini-demo</title>
+    <meta
+      name="description"
+      content="Filter a synthetic agent-span dataset held in a columnar in-browser store, aggregate it, run rule-based evaluators over whole runs, and open any run's span waterfall."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="stylesheet" href="../../assets/base.css" />
+    <link rel="stylesheet" href="../../assets/demo-shell.css" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#stage">Skip to the demo</a>
+
+    <header class="demo-header">
+      <div class="wrap">
+        <a class="demo-back" href="../../">All demos</a>
+        <h1 class="demo-title">Agent Trace Query Console</h1>
+        <p class="demo-sub">
+          A synthetic fleet of AI-agent runs is loaded into a columnar span
+          store in your browser. Filter it, group it, run evaluators over whole
+          runs, and open any run's span waterfall — every number on the page is
+          computed from the scan you just triggered.
+        </p>
+        <p class="demo-meta">
+          <span class="tag">agent observability</span>
+          <span class="tag">columnar</span>
+          <span class="tag">synthetic data</span>
+        </p>
+        <p class="provenance">
+          An independent mini-demo built by Aarush Kandukoori, inspired by
+          Laminar's public product description. Not affiliated with Laminar.
+        </p>
+      </div>
+    </header>
+
+    <main class="demo-main">
+      <div class="wrap">
+        <section id="stage" class="demo-stage" tabindex="-1">
+          <!-- 1. Scan --------------------------------------------------- -->
+          <div class="panel stack">
+            <div class="row row-between">
+              <h2>Columnar span scan</h2>
+              <span
+                class="status"
+                id="scan-status"
+                data-state="running"
+                role="status"
+                aria-live="polite"
+                >loading dataset</span
+              >
+            </div>
+            <div class="metrics">
+              <div class="metric">
+                <span class="metric-label">Spans matched</span>
+                <span class="metric-value tnum" id="m-matched">—</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Scan time per pass</span>
+                <span class="metric-value tnum" id="m-scan">—</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Throughput</span>
+                <span class="metric-value tnum" id="m-thru">—</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Columns read</span>
+                <span class="metric-value tnum" id="m-cols">—</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Bytes read</span>
+                <span class="metric-value tnum" id="m-bytes">—</span>
+              </div>
+            </div>
+            <p class="note" id="scan-note">
+              The scan touches only the columns the query mentions.
+            </p>
+            <p class="hint" id="scan-cols">Columns touched: —</p>
+          </div>
+
+          <!-- 2. Matched spans ------------------------------------------ -->
+          <div class="panel stack">
+            <h2>Matched spans</h2>
+            <div class="metrics">
+              <div class="metric">
+                <span class="metric-label">p50 duration</span>
+                <span class="metric-value tnum" id="m-p50">—</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">p95 duration</span>
+                <span class="metric-value tnum" id="m-p95">—</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Failed spans</span>
+                <span class="metric-value tnum" id="m-err">—</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Model spend</span>
+                <span class="metric-value tnum" id="m-cost">—</span>
+              </div>
+            </div>
+            <div class="chart-scroll">
+              <div id="hist"></div>
+            </div>
+            <p class="hint">
+              Duration buckets are log-spaced. Bar heights are counts of
+              matched spans; the count is printed above each bar.
+            </p>
+          </div>
+
+          <!-- 3. Group by ------------------------------------------------ -->
+          <div class="panel stack">
+            <div class="row row-between panel-head">
+              <h2>Breakdown</h2>
+              <div class="field field-inline">
+                <label class="label" for="g-dim">Group by</label>
+                <select id="g-dim">
+                  <option value="agent">agent</option>
+                  <option value="name" selected>span name</option>
+                  <option value="model">model</option>
+                  <option value="kind">span kind</option>
+                  <option value="status">status</option>
+                  <option value="errType">error type</option>
+                  <option value="env">environment</option>
+                  <option value="version">agent version</option>
+                </select>
+              </div>
+            </div>
+            <div class="table-scroll" id="g-wrap">
+              <table class="data">
+                <thead>
+                  <tr>
+                    <th scope="col">Group</th>
+                    <th scope="col" class="num">Spans</th>
+                    <th scope="col" class="num">Fail %</th>
+                    <th scope="col" class="num">p50</th>
+                    <th scope="col" class="num">p95</th>
+                    <th scope="col" class="num">Spend</th>
+                  </tr>
+                </thead>
+                <tbody id="g-body"></tbody>
+              </table>
+            </div>
+            <div class="empty" id="g-empty" hidden>
+              <h3>No spans match</h3>
+              <p>
+                Loosen a filter — the minimum-duration slider is the usual
+                culprit.
+              </p>
+            </div>
+          </div>
+
+          <!-- 4. Evaluators ---------------------------------------------- -->
+          <div class="panel stack">
+            <h2>Evaluators over whole runs</h2>
+            <p class="muted eval-intro">
+              Evaluators score a complete run, not a single span, so only the
+              run-level filters (agent, model, environment) narrow the set
+              below — span kind, status and duration filters do not apply here.
+            </p>
+            <div class="metrics">
+              <div class="metric">
+                <span class="metric-label">Runs evaluated</span>
+                <span class="metric-value tnum" id="ev-n">—</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Pass all enabled</span>
+                <span class="metric-value tnum" id="ev-rate">—</span>
+              </div>
+              <div class="metric metric-wide">
+                <span class="metric-label">95% bootstrap CI on pass rate</span>
+                <span class="metric-value tnum" id="ev-ci">—</span>
+              </div>
+            </div>
+            <ul class="eval-list" id="ev-list"></ul>
+            <p class="hint" id="ev-boot">—</p>
+          </div>
+
+          <!-- 5. Runs + waterfall ---------------------------------------- -->
+          <div class="panel stack">
+            <div class="row row-between panel-head">
+              <h2>Runs</h2>
+              <div class="field field-inline">
+                <label class="label" for="r-sort">Sort by</label>
+                <select id="r-sort">
+                  <option value="fail" selected>failing evaluators first</option>
+                  <option value="slow">slowest wall-clock</option>
+                  <option value="cost">highest spend</option>
+                  <option value="spans">most spans</option>
+                  <option value="recent">most recent</option>
+                </select>
+              </div>
+            </div>
+            <div class="table-scroll" id="r-wrap">
+              <table class="data">
+                <thead>
+                  <tr>
+                    <th scope="col">Run</th>
+                    <th scope="col">Agent</th>
+                    <th scope="col">Model</th>
+                    <th scope="col" class="num">Wall-clock</th>
+                    <th scope="col" class="num">Spend</th>
+                    <th scope="col" class="num">Spans</th>
+                    <th scope="col">Verdict</th>
+                    <th scope="col"><span class="sr-only">Open</span></th>
+                  </tr>
+                </thead>
+                <tbody id="r-body"></tbody>
+              </table>
+            </div>
+            <div class="empty" id="r-empty" hidden>
+              <h3>No runs in this slice</h3>
+              <p>No run matches the current agent, model and environment.</p>
+            </div>
+
+            <div class="waterfall" id="wf">
+              <div class="row row-between panel-head">
+                <h3 id="wf-title">Span waterfall</h3>
+                <span class="tag" id="wf-verdict">—</span>
+              </div>
+              <p class="hint" id="wf-meta">—</p>
+              <ol class="wf-rows" id="wf-rows"></ol>
+              <p class="hint" id="wf-foot">
+                Bars are positioned by each span's start offset inside the run;
+                width is its duration.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <aside class="demo-controls" aria-label="Query and evaluator controls">
+          <div class="control-group">
+            <p class="eyebrow">Span filters</p>
+            <div class="field">
+              <label class="label" for="f-agent">Agent</label>
+              <select id="f-agent"></select>
+            </div>
+            <div class="field">
+              <label class="label" for="f-model">Model</label>
+              <select id="f-model"></select>
+            </div>
+            <div class="field">
+              <label class="label" for="f-env">Environment</label>
+              <select id="f-env"></select>
+            </div>
+            <div class="field">
+              <label class="label" for="f-kind">Span kind</label>
+              <select id="f-kind"></select>
+            </div>
+            <div class="field">
+              <label class="label" for="f-status">Status</label>
+              <select id="f-status"></select>
+            </div>
+            <div class="field">
+              <label class="control-readout" for="f-mindur">
+                <span>Minimum duration</span>
+                <output id="f-mindur-out" for="f-mindur">0 ms</output>
+              </label>
+              <input
+                id="f-mindur"
+                type="range"
+                min="0"
+                max="1500"
+                step="25"
+                value="0"
+              />
+            </div>
+          </div>
+
+          <div class="control-group">
+            <p class="eyebrow">Evaluators</p>
+            <label class="check" for="e-latency">
+              <input id="e-latency" type="checkbox" checked />
+              <span><code>latency_budget</code></span>
+            </label>
+            <div class="field">
+              <label class="control-readout" for="t-latency">
+                <span>Budget</span>
+                <output id="t-latency-out" for="t-latency">6.0 s</output>
+              </label>
+              <input
+                id="t-latency"
+                type="range"
+                min="1000"
+                max="20000"
+                step="250"
+                value="6000"
+              />
+            </div>
+
+            <label class="check" for="e-cost">
+              <input id="e-cost" type="checkbox" checked />
+              <span><code>cost_ceiling</code></span>
+            </label>
+            <div class="field">
+              <label class="control-readout" for="t-cost">
+                <span>Ceiling per run</span>
+                <output id="t-cost-out" for="t-cost">$0.015</output>
+              </label>
+              <input
+                id="t-cost"
+                type="range"
+                min="1"
+                max="200"
+                step="1"
+                value="15"
+              />
+            </div>
+
+            <label class="check" for="e-steps">
+              <input id="e-steps" type="checkbox" checked />
+              <span><code>no_failed_step</code></span>
+            </label>
+            <label class="check" for="e-grounded">
+              <input id="e-grounded" type="checkbox" checked />
+              <span><code>grounded_answer</code></span>
+            </label>
+            <p class="hint">
+              <code>grounded_answer</code> fails when a run's final model call
+              emits more than 120 output tokens with no retrieval or search span
+              before it.
+            </p>
+          </div>
+
+          <div class="control-group">
+            <p class="eyebrow">Dataset</p>
+            <p class="hint" id="ds-info">—</p>
+            <div class="control-actions">
+              <button class="btn" type="button" id="btn-reset">
+                Reset query
+              </button>
+              <button class="btn btn-primary" type="button" id="btn-regen">
+                New sample
+              </button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <footer class="demo-footer">
+      <div class="wrap">
+        <span
+          >All traces, latencies, token counts and prices on this page are
+          synthetic and generated in-browser. Nothing here is a measurement of
+          any real system.</span
+        >
+        <a href="../../">Back to all demos</a>
+      </div>
+    </footer>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

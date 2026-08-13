@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DataFrame Plan Optimizer Playground — mini-demo</title>
+    <meta
+      name="description"
+      content="Write a PySpark-style DataFrame program, watch it get parsed, analyzed and optimized, then run it two ways — vectorized batches vs row-at-a-time — over synthetic columnar data."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="stylesheet" href="../../assets/base.css" />
+    <link rel="stylesheet" href="../../assets/demo-shell.css" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#stage">Skip to the demo</a>
+
+    <header class="demo-header">
+      <div class="wrap">
+        <a class="demo-back" href="../../">All demos</a>
+        <h1 class="demo-title">DataFrame Plan Optimizer Playground</h1>
+        <p class="demo-sub">
+          Write a PySpark-style DataFrame program. This page parses it, resolves
+          it against a synthetic Parquet-shaped catalog, optimizes the plan, and
+          then executes it twice in your browser — once with a vectorized
+          batch-at-a-time engine, once with a row-at-a-time interpreter — so you
+          can watch each optimizer rule change the bytes read and the wall time.
+        </p>
+        <p class="demo-meta">
+          <span class="tag">query engines</span>
+          <span class="tag">columnar</span>
+          <span class="tag">synthetic data</span>
+        </p>
+        <p class="provenance">
+          An independent mini-demo built by Aarush Kandukoori, inspired by
+          LakeSail's public product description. Not affiliated with LakeSail.
+        </p>
+      </div>
+    </header>
+
+    <main class="demo-main">
+      <div class="wrap">
+        <section id="stage" class="demo-stage" tabindex="-1">
+          <!-- 1. Program ------------------------------------------------- -->
+          <div class="panel stack">
+            <div class="row row-between">
+              <h2 class="h-panel">DataFrame program</h2>
+              <span class="status" id="status" data-state="running">Ready</span>
+            </div>
+
+            <div class="field">
+              <label for="preset">Example query</label>
+              <select id="preset">
+                <option value="0">
+                  Net profit by brand — join, date range, top 10
+                </option>
+                <option value="1">
+                  Daily revenue in a 20-day window — heavy row-group pruning
+                </option>
+                <option value="2">
+                  Loss-making or bulk sales by store — a predicate stats cannot
+                  prune
+                </option>
+                <option value="3">
+                  Profitable stores — HAVING, which must not be pushed down
+                </option>
+                <option value="4">
+                  Largest single tickets — arithmetic predicate, no aggregate
+                </option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="program">Program (edited freely — it is parsed, not matched)</label>
+              <textarea
+                id="program"
+                rows="9"
+                spellcheck="false"
+                autocapitalize="off"
+                autocorrect="off"
+                aria-describedby="program-hint"
+              ></textarea>
+              <p class="hint" id="program-hint">
+                Supported: <code>spark.table</code>, <code>filter</code>/<code>where</code>,
+                <code>select</code>, <code>join</code>, <code>groupBy</code>,
+                <code>agg</code> (<code>sum</code>, <code>count</code>,
+                <code>avg</code>, <code>min</code>, <code>max</code>),
+                <code>orderBy</code> (<code>asc</code>/<code>desc</code>),
+                <code>limit</code>. Press <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to run.
+              </p>
+            </div>
+
+            <div class="control-actions">
+              <button class="btn btn-primary" type="button" id="run">
+                Run query
+              </button>
+              <button class="btn" type="button" id="reset">
+                Reset to example
+              </button>
+            </div>
+
+            <p class="note note-warn" id="error" role="alert" hidden></p>
+
+            <p class="sr-only" id="run-summary" role="status" aria-live="polite"></p>
+          </div>
+
+          <!-- 2. Plans -------------------------------------------------- -->
+          <div class="panel stack">
+            <h2 class="h-panel">Plans</h2>
+            <div class="plan-grid">
+              <div>
+                <p class="eyebrow">Analyzed logical plan</p>
+                <pre class="plan" id="plan-analyzed" tabindex="0" aria-label="Analyzed logical plan, as written"></pre>
+              </div>
+              <div>
+                <p class="eyebrow">Optimized physical plan</p>
+                <pre class="plan" id="plan-optimized" tabindex="0" aria-label="Optimized physical plan, after the enabled rules"></pre>
+              </div>
+            </div>
+            <div>
+              <p class="eyebrow">What the rules did</p>
+              <ul class="rules" id="rules"></ul>
+            </div>
+          </div>
+
+          <!-- 3. Scan I/O ------------------------------------------------ -->
+          <div class="panel stack">
+            <h2 class="h-panel">Scan I/O</h2>
+            <p class="hint">
+              Row groups hold 1,000 rows each and carry min/max statistics per
+              column, the way a Parquet footer does. A group is skipped only
+              when a pushed-down predicate is provably false for its whole
+              range.
+            </p>
+            <div id="scans" class="stack"></div>
+          </div>
+
+          <!-- 4. Execution ---------------------------------------------- -->
+          <div class="panel stack">
+            <h2 class="h-panel">Execution</h2>
+            <div class="metrics">
+              <div class="metric">
+                <span class="metric-label">Vectorized</span>
+                <span class="metric-value" id="m-vec">—</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Row-at-a-time</span>
+                <span class="metric-value" id="m-row">—</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Ratio</span>
+                <span class="metric-value" id="m-speedup">—</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Bytes read</span>
+                <span class="metric-value" id="m-bytes">—</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Rows scanned</span>
+                <span class="metric-value" id="m-scanned">—</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Rows returned</span>
+                <span class="metric-value" id="m-out">—</span>
+              </div>
+            </div>
+
+            <div class="bars">
+              <div class="bar-row">
+                <span class="bar-name">Vectorized batches</span>
+                <span class="bar"><span id="bar-vec"></span></span>
+                <span class="bar-value tnum" id="bar-vec-v">—</span>
+              </div>
+              <div class="bar-row">
+                <span class="bar-name">Row-at-a-time</span>
+                <span class="bar"><span id="bar-row"></span></span>
+                <span class="bar-value tnum" id="bar-row-v">—</span>
+              </div>
+            </div>
+            <p class="hint" id="bench-note">
+              Both engines run the same optimized plan on the same data. Each is
+              timed with <code>performance.now()</code> over repeated rounds —
+              enough runs per round to clear the clock's resolution — and the
+              fastest per-run time is reported. This is JavaScript in your
+              browser, so treat the ratio as the signal and the absolute numbers
+              as noise.
+            </p>
+
+            <div>
+              <p class="eyebrow">Per-operator row counts (vectorized run)</p>
+              <div class="table-scroll">
+                <table class="data" id="ops">
+                  <thead>
+                    <tr>
+                      <th scope="col">Operator</th>
+                      <th scope="col" class="num">Rows in</th>
+                      <th scope="col" class="num">Rows out</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5. Result -------------------------------------------------- -->
+          <div class="panel stack">
+            <div class="row row-between">
+              <h2 class="h-panel">Result</h2>
+              <span class="tag" id="result-check">not run yet</span>
+            </div>
+            <div id="result-empty" class="empty">
+              <h3>No rows yet</h3>
+              <p>Run the query to materialize a result here.</p>
+            </div>
+            <div class="table-scroll" id="result-wrap" hidden>
+              <table class="data" id="result">
+                <thead>
+                  <tr></tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <p class="hint" id="result-count"></p>
+          </div>
+        </section>
+
+        <aside class="demo-controls" aria-label="Controls">
+          <div class="control-group">
+            <p class="eyebrow">Optimizer rules</p>
+            <label class="check">
+              <input type="checkbox" id="rule-filter" checked />
+              <span>Filter pushdown</span>
+            </label>
+            <label class="check">
+              <input type="checkbox" id="rule-projection" checked />
+              <span>Projection pushdown</span>
+            </label>
+            <label class="check">
+              <input type="checkbox" id="rule-stats" checked />
+              <span>Row-group statistics pruning</span>
+            </label>
+            <label class="check">
+              <input type="checkbox" id="rule-broadcast" checked />
+              <span>Broadcast the small side of a join</span>
+            </label>
+            <p class="hint">
+              Turning a rule off re-plans and re-runs. Results stay identical —
+              only the work changes.
+            </p>
+          </div>
+
+          <div class="control-group">
+            <p class="eyebrow">Engine</p>
+            <div class="field">
+              <label for="batch">Vector batch size (rows)</label>
+              <select id="batch">
+                <option value="256">256</option>
+                <option value="1024">1,024</option>
+                <option value="4096" selected>4,096</option>
+                <option value="16384">16,384</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="scale">Fact table size (rows)</label>
+              <select id="scale">
+                <option value="6000">6,000</option>
+                <option value="24000" selected>24,000</option>
+                <option value="60000">60,000</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <p class="eyebrow">Catalog</p>
+            <div id="catalog" class="catalog"></div>
+          </div>
+
+          <div class="control-group">
+            <p class="eyebrow">Legend</p>
+            <div class="legend">
+              <span class="legend-item">
+                <span class="legend-swatch"></span> row group scanned
+              </span>
+              <span class="legend-item">
+                <span class="legend-swatch legend-swatch-skip"></span> row group
+                skipped by statistics
+              </span>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <footer class="demo-footer">
+      <div class="wrap">
+        <span
+          >All data on this page is synthetic and generated in-browser. No
+          network calls, no dependencies.</span
+        >
+        <a href="../../">Back to all demos</a>
+      </div>
+    </footer>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

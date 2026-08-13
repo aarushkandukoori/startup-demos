@@ -1,0 +1,186 @@
+/* Demo-specific styles only. Colours come from base.css tokens — no new
+   accent, nothing that breaks in one of the two themes. */
+
+/* Watermark / clock strip ------------------------------------------------- */
+
+.wm-grid {
+  display: grid;
+  gap: var(--s-3);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
+}
+
+.wm-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--s-2) var(--s-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+
+.wm-cell .mono {
+  font-size: var(--fs-sm);
+  font-weight: 620;
+}
+
+/* Derived bounds ---------------------------------------------------------- */
+
+.formula-list {
+  list-style: none;
+  padding: 0;
+  margin: var(--s-2) 0 var(--s-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.formula-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-2) var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--r-md);
+}
+
+.formula-side {
+  font-size: var(--fs-xs);
+  font-weight: 620;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  min-width: 9.5rem;
+}
+
+.formula-list .mono {
+  font-size: var(--fs-xs);
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+/* Chart ------------------------------------------------------------------- */
+
+.chart {
+  width: 100%;
+  height: 190px;
+  display: block;
+}
+
+@media (min-width: 40rem) {
+  .chart {
+    height: 230px;
+  }
+}
+
+.legend-swatch.legend-solid,
+.legend-swatch.legend-dashed {
+  width: 1.4rem;
+  height: 0;
+  border-radius: 0;
+  background: none;
+  align-self: center;
+}
+
+.legend-swatch.legend-solid {
+  border-top: 3px solid var(--accent);
+}
+
+.legend-swatch.legend-dashed {
+  border-top: 2px dashed var(--text-muted);
+}
+
+/* Hash-table panes -------------------------------------------------------- */
+
+.state-grid {
+  display: grid;
+  gap: var(--s-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+}
+
+.state-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-bottom: var(--s-2);
+  font-size: var(--fs-sm);
+  font-weight: 620;
+}
+
+table.data tbody tr.is-doomed td {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+table.data tbody tr.is-doomed td:first-child {
+  box-shadow: inset 3px 0 0 var(--warn);
+}
+
+.doomed-key {
+  background: var(--warn-soft);
+  color: var(--warn);
+  border-radius: var(--r-sm);
+  padding: 0.05em 0.35em;
+  white-space: nowrap;
+}
+
+/* Metrics ----------------------------------------------------------------- */
+
+.metric-value.is-bad {
+  color: var(--danger);
+}
+
+/* Log --------------------------------------------------------------------- */
+
+.log-side {
+  color: var(--text-muted);
+  flex: none;
+}
+
+.log-hit {
+  color: var(--accent);
+}
+
+.log-late {
+  color: var(--warn);
+  font-weight: 700;
+}
+
+.log-evict {
+  color: var(--text-muted);
+}
+
+.log-dim {
+  color: var(--text-muted);
+}
+
+.log:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Controls ---------------------------------------------------------------- */
+
+.demo-controls .field .hint {
+  margin: 0;
+}
+
+/* Nine tiles is a lot of stacking on a phone — let them pair up. */
+.demo-stage .metrics {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 7rem), 1fr));
+}
+
+/* A 24px-tall slider is a hard target on touch; give it a 40px row. */
+.demo-controls input[type="range"] {
+  height: 2.5rem;
+}
+
+#retention-field.is-off {
+  opacity: 0.55;
+}
+
+.demo-controls .control-actions + .control-actions {
+  margin-top: calc(-1 * var(--s-1));
+}

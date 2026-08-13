@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mini-demos — Aarush Kandukoori</title>
+    <meta
+      name="description"
+      content="Small, working, independent mini-demos built by Aarush Kandukoori while researching companies he is reaching out to. Each one is inspired by a company's public product description and is not affiliated with that company."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="stylesheet" href="./assets/base.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f6e60'/%3E%3Cpath d='M9 21.5 16 10l7 11.5' stroke='%23fff' stroke-width='2.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+
+    <style>
+      /* Index-page-only styles. Everything shared lives in assets/base.css. */
+
+      .site-header {
+        padding-block: var(--s-8) var(--s-6);
+      }
+
+      .site-header .lede {
+        font-size: var(--fs-lg);
+        color: var(--text-muted);
+        line-height: var(--lh-snug);
+        max-width: 56ch;
+        margin-top: var(--s-4);
+      }
+
+      .site-header h1 {
+        max-width: 20ch;
+      }
+
+      .header-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--s-2) var(--s-4);
+        margin-top: var(--s-5);
+        font-size: var(--fs-sm);
+      }
+
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--s-3);
+        margin-bottom: var(--s-5);
+      }
+
+      .search-field {
+        flex: 1 1 18rem;
+        max-width: 24rem;
+      }
+
+      .result-count {
+        font-size: var(--fs-sm);
+        color: var(--text-muted);
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* Card ---------------------------------------------------------- */
+
+      .demo-card {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: var(--s-2);
+        transition: border-color var(--dur) var(--ease),
+          box-shadow var(--dur) var(--ease), transform var(--dur) var(--ease);
+      }
+
+      .demo-card:hover {
+        border-color: var(--border-strong);
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+      }
+
+      .demo-card:focus-within {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-ring);
+      }
+
+      .demo-card h2 {
+        font-size: var(--fs-lg);
+        margin: 0;
+      }
+
+      /* One tab stop per card: the title link covers the whole card. */
+      .demo-link {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .demo-link::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+      }
+
+      .demo-link:focus-visible {
+        outline: none;
+      }
+
+      .demo-card:hover h2 {
+        color: var(--accent);
+      }
+
+      .demo-what {
+        font-size: var(--fs-sm);
+        line-height: var(--lh-snug);
+        color: var(--text-muted);
+        margin: 0;
+        max-width: none;
+      }
+
+      .demo-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--s-2);
+        margin-top: auto;
+        padding-top: var(--s-2);
+      }
+
+      .disclaimer {
+        margin-top: var(--s-6);
+      }
+    </style>
+  </head>
+
+  <body>
+    <a class="skip-link" href="#demos">Skip to demos</a>
+
+    <header class="site-header">
+      <div class="wrap">
+        <p class="eyebrow">Aarush Kandukoori</p>
+        <h1>Small demos, built while reading about your company.</h1>
+        <p class="lede">
+          Each entry below is a self-contained mini-demo I built for myself
+          while researching a company I admire — real logic, real
+          interactivity, synthetic data, no build step. Open one and it works.
+        </p>
+        <p class="header-links">
+          <a href="https://aarushkandukoori.com">aarushkandukoori.com</a>
+          <a href="https://github.com/aarushkandukoori">GitHub</a>
+          <a href="mailto:akanduko@andrew.cmu.edu">akanduko@andrew.cmu.edu</a>
+        </p>
+      </div>
+    </header>
+
+    <main id="demos" class="section" tabindex="-1">
+      <div class="wrap">
+        <div class="toolbar" id="toolbar" hidden>
+          <div class="field search-field">
+            <label class="sr-only" for="search">Filter demos</label>
+            <input
+              type="search"
+              id="search"
+              placeholder="Filter by company, demo, or topic…"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </div>
+          <p class="result-count" id="count" role="status" aria-live="polite"></p>
+        </div>
+
+        <noscript>
+          <div class="empty">
+            <h2>This index needs JavaScript</h2>
+            <p>
+              The list of demos is rendered by a few lines of inline script.
+              Enable JavaScript to browse it, or open any
+              <code>demos/&lt;name&gt;/</code> URL directly.
+            </p>
+          </div>
+        </noscript>
+
+        <div class="grid" id="grid"></div>
+
+        <div class="empty" id="empty" hidden>
+          <h2 id="empty-title">No demos published yet</h2>
+          <p id="empty-body">
+            The first ones are being built now. Each will appear here the
+            moment it is added to the manifest.
+          </p>
+        </div>
+
+        <p class="note disclaimer">
+          These are independent projects built by Aarush Kandukoori, each
+          inspired by a company's <em>public</em> product description. None of
+          them are affiliated with, endorsed by, or built using any private
+          information from the companies named. Company names are used only to
+          say what inspired the demo.
+        </p>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <p class="muted">
+          Built by Aarush Kandukoori · CS + Stats/ML, Carnegie Mellon ·
+          <a href="https://aarushkandukoori.com">aarushkandukoori.com</a>
+        </p>
+      </div>
+    </footer>
+
+    <!--
+      The manifest is a plain script, not a fetch. If demos.js is missing or
+      malformed, window.DEMOS is simply undefined and the empty state renders.
+      There is no network request that can fail, and no JSON to mis-parse.
+    -->
+    <script src="./demos.js"></script>
+    <script>
+      (function () {
+        "use strict";
+
+        var grid = document.getElementById("grid");
+        var empty = document.getElementById("empty");
+        var emptyTitle = document.getElementById("empty-title");
+        var emptyBody = document.getElementById("empty-body");
+        var toolbar = document.getElementById("toolbar");
+        var search = document.getElementById("search");
+        var count = document.getElementById("count");
+
+        var SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+        function text(value) {
+          return typeof value === "string" ? value.trim() : "";
+        }
+
+        /* Validate every entry independently: one bad object hides itself
+           and nothing else. */
+        function normalize(entry) {
+          if (!entry || typeof entry !== "object") return null;
+          var slug = text(entry.slug);
+          var company = text(entry.company);
+          var title = text(entry.title);
+          var what = text(entry.what);
+          if (!SLUG_RE.test(slug) || !company || !title || !what) return null;
+
+          var tags = [];
+          if (Array.isArray(entry.tags)) {
+            for (var i = 0; i < entry.tags.length && tags.length < 3; i++) {
+              var tag = text(entry.tags[i]);
+              if (tag) tags.push(tag);
+            }
+          }
+          return {
+            slug: slug,
+            company: company,
+            title: title,
+            what: what,
+            tags: tags,
+            haystack: (
+              company +
+              " " +
+              title +
+              " " +
+              what +
+              " " +
+              tags.join(" ")
+            ).toLowerCase()
+          };
+        }
+
+        var source = Array.isArray(window.DEMOS) ? window.DEMOS : [];
+        var demos = [];
+        for (var i = 0; i < source.length; i++) {
+          var ok = normalize(source[i]);
+          if (ok) demos.push(ok);
+        }
+
+        demos.sort(function (a, b) {
+          var byCompany = a.company.localeCompare(b.company, "en", {
+            sensitivity: "base"
+          });
+          return byCompany !== 0
+            ? byCompany
+            : a.title.localeCompare(b.title, "en", { sensitivity: "base" });
+        });
+
+        function card(demo) {
+          var article = document.createElement("article");
+          article.className = "card demo-card";
+
+          var eyebrow = document.createElement("p");
+          eyebrow.className = "eyebrow";
+          eyebrow.textContent = demo.company;
+
+          var heading = document.createElement("h2");
+          var link = document.createElement("a");
+          link.className = "demo-link";
+          link.href = "./demos/" + demo.slug + "/";
+          link.textContent = demo.title;
+          heading.appendChild(link);
+
+          var what = document.createElement("p");
+          what.className = "demo-what";
+          what.textContent = demo.what;
+
+          article.appendChild(eyebrow);
+          article.appendChild(heading);
+          article.appendChild(what);
+
+          if (demo.tags.length) {
+            var tagRow = document.createElement("p");
+            tagRow.className = "demo-tags";
+            for (var t = 0; t < demo.tags.length; t++) {
+              var tag = document.createElement("span");
+              tag.className = "tag";
+              tag.textContent = demo.tags[t];
+              tagRow.appendChild(tag);
+            }
+            article.appendChild(tagRow);
+          }
+
+          return article;
+        }
+
+        function render(query) {
+          var q = text(query).toLowerCase();
+          var shown = [];
+          for (var i = 0; i < demos.length; i++) {
+            if (!q || demos[i].haystack.indexOf(q) !== -1) shown.push(demos[i]);
+          }
+
+          var frag = document.createDocumentFragment();
+          for (var j = 0; j < shown.length; j++) frag.appendChild(card(shown[j]));
+          grid.textContent = "";
+          grid.appendChild(frag);
+
+          var hasAny = shown.length > 0;
+          grid.hidden = !hasAny;
+          empty.hidden = hasAny;
+
+          if (!hasAny) {
+            if (demos.length === 0) {
+              emptyTitle.textContent = "No demos published yet";
+              emptyBody.textContent =
+                "The first ones are being built now. Each will appear here the moment it is added to the manifest.";
+            } else {
+              emptyTitle.textContent = "No demos match that filter";
+              emptyBody.textContent =
+                "Try a company name, a topic like “streaming” or “ECG”, or clear the box.";
+            }
+          }
+
+          if (demos.length) {
+            count.textContent =
+              shown.length === demos.length
+                ? demos.length + (demos.length === 1 ? " demo" : " demos")
+                : shown.length + " of " + demos.length + " demos";
+          }
+        }
+
+        toolbar.hidden = demos.length < 2;
+
+        search.addEventListener("input", function () {
+          render(search.value);
+        });
+
+        render("");
+      })();
+    </script>
+  </body>
+</html>

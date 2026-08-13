@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Symmetric Hash Join Playground — mini-demo</title>
+    <meta
+      name="description"
+      content="Join two unbounded synthetic event streams and watch watermark-derived interval bounds evict join state that can no longer match."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="stylesheet" href="../../assets/base.css" />
+    <link rel="stylesheet" href="../../assets/demo-shell.css" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#stage">Skip to the demo</a>
+
+    <header class="demo-header">
+      <div class="wrap">
+        <a class="demo-back" href="../../">All demos</a>
+        <h1 class="demo-title">Symmetric Hash Join Playground</h1>
+        <p class="demo-sub">
+          Two unbounded, out-of-order event streams run through a symmetric hash
+          join in your browser: tune the join window and the watermark, and watch
+          buffered state get evicted by a bound derived from the join predicate
+          itself — or watch recall fall when the watermark is too aggressive.
+        </p>
+        <p class="demo-meta">
+          <span class="tag">streaming sql</span>
+          <span class="tag">watermarks</span>
+          <span class="tag">synthetic data</span>
+        </p>
+        <p class="provenance">
+          An independent mini-demo built by Aarush Kandukoori, inspired by
+          Synnada's public product description. Not affiliated with Synnada.
+        </p>
+      </div>
+    </header>
+
+    <main class="demo-main">
+      <div class="wrap">
+        <section id="stage" class="demo-stage" tabindex="-1">
+          <div class="panel stack">
+            <div class="row row-between">
+              <p class="eyebrow">Continuous query</p>
+              <span class="status" id="run-status" data-state="idle">idle</span>
+            </div>
+
+            <pre class="scroll-x"><code id="sql"></code></pre>
+
+            <div class="wm-grid">
+              <div class="wm-cell">
+                <span class="metric-label">watermark(orders)</span>
+                <span class="mono tnum" id="wm-left">--:--:--</span>
+              </div>
+              <div class="wm-cell">
+                <span class="metric-label">watermark(shipments)</span>
+                <span class="mono tnum" id="wm-right">--:--:--</span>
+              </div>
+              <div class="wm-cell">
+                <span class="metric-label">event-time clock</span>
+                <span class="mono tnum" id="clock">--:--:--</span>
+              </div>
+              <div class="wm-cell">
+                <span class="metric-label">events ingested</span>
+                <span class="mono tnum" id="progress">0 / 0</span>
+              </div>
+            </div>
+
+            <div>
+              <p class="eyebrow">
+                State bound in force —
+                <span id="strategy-name">interval pruning</span>
+              </p>
+              <ul class="formula-list">
+                <li><span class="formula-side">orders buffer</span><span class="mono" id="bound-left"></span></li>
+                <li><span class="formula-side">shipments buffer</span><span class="mono" id="bound-right"></span></li>
+              </ul>
+              <p class="hint">
+                The bounds are solved from the ON clause: a future shipment row
+                cannot arrive before <code>watermark(shipments)</code>, so an
+                order whose window closes before that watermark can never match
+                again and is safe to drop. Symmetrically, a shipment older than
+                <code>watermark(orders)</code> can never find a future order,
+                because the filter requires <code>s.ts &gt;= o.ts</code>.
+              </p>
+            </div>
+
+            <p class="note" id="summary" role="status" aria-live="polite">
+              Press Run to start ingesting the two synthetic streams.
+            </p>
+          </div>
+
+          <div class="panel stack">
+            <p class="eyebrow">Buffered join state over the run</p>
+            <canvas
+              id="chart"
+              class="chart"
+              aria-label="Line chart of buffered join-state rows against events ingested, comparing the selected pruning strategy against no pruning. The figures are repeated in the metrics below."
+              role="img"
+            ></canvas>
+            <div class="legend">
+              <span class="legend-item">
+                <span class="legend-swatch legend-solid"></span>
+                <span id="legend-a">buffered rows · interval pruning</span>
+              </span>
+              <span class="legend-item">
+                <span class="legend-swatch legend-dashed"></span>
+                <span>buffered rows · no pruning (baseline)</span>
+              </span>
+            </div>
+            <p class="hint" id="chart-note"></p>
+
+            <div class="metrics">
+              <div class="metric">
+                <span class="metric-label">Buffered now</span>
+                <span class="metric-value" id="m-buffered">0</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Buffered, no pruning</span>
+                <span class="metric-value" id="m-baseline">0</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Peak buffered</span>
+                <span class="metric-value" id="m-peak">0</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Peak, no pruning</span>
+                <span class="metric-value" id="m-peak-base">0</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Join rows emitted</span>
+                <span class="metric-value" id="m-emitted">0</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Missed vs batch</span>
+                <span class="metric-value" id="m-missed">0</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Recall</span>
+                <span class="metric-value" id="m-recall">100.0%</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Late arrivals</span>
+                <span class="metric-value" id="m-late">0</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Rows evicted</span>
+                <span class="metric-value" id="m-evicted">0</span>
+              </div>
+            </div>
+            <p class="hint">
+              <strong>Missed vs batch</strong> compares the streaming output
+              against a plain batch scan of the same synthetic rows, counted only
+              once both sides of a pair have been ingested. It is zero whenever
+              the watermark delay is at least the stream's disorder — the
+              buffered-row saving is then free.
+            </p>
+          </div>
+
+          <div class="panel stack">
+            <p class="eyebrow">Hash tables right now</p>
+            <div class="state-grid">
+              <div>
+                <p class="state-head">
+                  orders buffer
+                  <span class="tag" id="left-count">0</span>
+                </p>
+                <div class="table-scroll">
+                  <table class="data">
+                    <thead>
+                      <tr>
+                        <th scope="col">event ts</th>
+                        <th scope="col">order_id</th>
+                        <th scope="col">prunes at</th>
+                      </tr>
+                    </thead>
+                    <tbody id="left-body"></tbody>
+                  </table>
+                </div>
+              </div>
+              <div>
+                <p class="state-head">
+                  shipments buffer
+                  <span class="tag" id="right-count">0</span>
+                </p>
+                <div class="table-scroll">
+                  <table class="data">
+                    <thead>
+                      <tr>
+                        <th scope="col">event ts</th>
+                        <th scope="col">order_id</th>
+                        <th scope="col">prunes at</th>
+                      </tr>
+                    </thead>
+                    <tbody id="right-body"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <p class="hint">
+              Oldest seven rows per side. A row marked
+              <span class="doomed-key">◂ about to be evicted</span> is within one
+              second of the bound above and will be dropped as soon as the
+              watermark advances past it.
+            </p>
+          </div>
+
+          <div class="panel stack">
+            <p class="eyebrow">Query output — most recent join rows</p>
+            <div class="table-scroll">
+              <table class="data">
+                <thead>
+                  <tr>
+                    <th scope="col">emitted at</th>
+                    <th scope="col">order_id</th>
+                    <th scope="col">region</th>
+                    <th scope="col">carrier</th>
+                    <th scope="col" class="num">fulfil_lag</th>
+                  </tr>
+                </thead>
+                <tbody id="out-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel stack">
+            <p class="eyebrow">Ingest log — last 60 events</p>
+            <div class="log" id="log" tabindex="0" role="log" aria-label="Per-event ingest log"></div>
+          </div>
+        </section>
+
+        <aside class="demo-controls" aria-label="Simulation controls">
+          <div class="control-group">
+            <p class="eyebrow">Query</p>
+            <div class="field">
+              <label class="control-readout" for="window">
+                <span>Join window</span>
+                <output id="window-out" for="window">60 s</output>
+              </label>
+              <input id="window" type="range" min="5" max="240" step="5" value="60" />
+              <p class="hint">
+                The <code>BETWEEN</code> interval in the ON clause. Widening it
+                admits more true matches and forces a larger buffer.
+              </p>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <p class="eyebrow">Event time</p>
+            <div class="field">
+              <label class="control-readout" for="lateness">
+                <span>Watermark delay</span>
+                <output id="lateness-out" for="lateness">8 s</output>
+              </label>
+              <input id="lateness" type="range" min="0" max="60" step="1" value="8" />
+              <p class="hint">
+                Watermark = max event time seen on that side minus this delay.
+                Set it below the stream disorder and the watermark starts lying:
+                rows get evicted before their partner shows up, and
+                <em>missed vs batch</em> climbs.
+              </p>
+            </div>
+            <div class="field">
+              <label class="control-readout" for="disorder">
+                <span>Stream disorder</span>
+                <output id="disorder-out" for="disorder">12 s</output>
+              </label>
+              <input id="disorder" type="range" min="0" max="60" step="2" value="12" />
+              <p class="hint">
+                How far behind its event time a row may arrive. Regenerates the
+                ingest order of the same rows.
+              </p>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <p class="eyebrow">State pruning</p>
+            <div class="field">
+              <label for="strategy">Strategy</label>
+              <select id="strategy">
+                <option value="interval" selected>
+                  Interval bound from the predicate
+                </option>
+                <option value="retention">Fixed retention age</option>
+                <option value="none">None — keep everything</option>
+              </select>
+            </div>
+            <div class="field" id="retention-field">
+              <label class="control-readout" for="retention">
+                <span>Retention age</span>
+                <output id="retention-out" for="retention">60 s</output>
+              </label>
+              <input id="retention" type="range" min="5" max="300" step="5" value="60" />
+              <p class="hint">
+                Only used by the fixed-retention strategy: drop anything older
+                than this, on both sides, whatever the predicate says.
+              </p>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <p class="eyebrow">Run</p>
+            <div class="field">
+              <label class="control-readout" for="speed">
+                <span>Ingest rate</span>
+                <output id="speed-out" for="speed">40 /s</output>
+              </label>
+              <input id="speed" type="range" min="5" max="300" step="5" value="40" />
+            </div>
+            <div class="control-actions">
+              <button class="btn btn-primary" type="button" id="run" aria-pressed="false">Run</button>
+              <button class="btn" type="button" id="step">Step</button>
+            </div>
+            <div class="control-actions">
+              <button class="btn" type="button" id="run-end">Run to end</button>
+              <button class="btn" type="button" id="reset">Reset</button>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <p class="eyebrow">Dataset</p>
+            <div class="field">
+              <label for="seed">Seed</label>
+              <input id="seed" type="number" min="1" max="999999" step="1" value="7" />
+            </div>
+            <div class="control-actions">
+              <button class="btn" type="button" id="regen">Regenerate stream</button>
+            </div>
+            <p class="hint">
+              240 synthetic orders and their shipments, generated in-browser from
+              this seed. Same seed, same stream, every load.
+            </p>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <footer class="demo-footer">
+      <div class="wrap">
+        <span>All data on this page is synthetic and generated in-browser.</span>
+        <a href="../../">Back to all demos</a>
+      </div>
+    </footer>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
